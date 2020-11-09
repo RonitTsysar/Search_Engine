@@ -26,7 +26,7 @@ class ReadFile:
         for root, dirs, files in os.walk(self.corpus_path):
             for file in files:
                 if file.endswith(".parquet"):
-                    files_list.append(self.read_file(os.path.join(root, file)))
+                    files_list.append(self.read_file(file))
         return files_list
 
 
