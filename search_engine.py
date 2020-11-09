@@ -11,22 +11,27 @@ def run_engine():
 
     :return:
     """
-    number_of_documents = 0
 
     config = ConfigClass()
     r = ReadFile(corpus_path=config.get__corpusPath())
     p = Parse()
     indexer = Indexer(config)
+    number_of_documents = 0
+    number_of_files = 0
 
-    documents_list = r.read_file(file_name='sample3.parquet')
-    # Iterate over every document in the file
-    for idx, document in enumerate(documents_list):
-        # parse the document
-        parsed_document = p.parse_doc(document)
-        number_of_documents += 1
-        # index the document data
-        indexer.add_new_doc(parsed_document)
+    files_list = r.read_corpus()
+    for file in files_list:
+        # Iterate over every document in the file
+        number_of_files += 1
+        for idx, document in enumerate(file):
+            # parse the document
+            parsed_document = p.parse_doc(document)
+            number_of_documents += 1
+            # index the document data
+            indexer.add_new_doc(parsed_document)
     print('Finished parsing and indexing. Starting to export files')
+    print(f'number_of_files : {number_of_files}')
+    print(f'number_of_documents : {number_of_documents}')
 
     utils.save_obj(indexer.inverted_idx, "inverted_idx")
     utils.save_obj(indexer.postingDict, "posting")

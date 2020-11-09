@@ -16,3 +16,17 @@ class ReadFile:
         full_path = os.path.join(self.corpus_path, file_name)
         df = pd.read_parquet(full_path, engine="pyarrow")
         return df.values.tolist()
+
+    def read_corpus(self):
+        """
+        This function is reading the whole corpus data using read_file function
+        :return: documents_list contains tweets df.
+        """
+        files_list = []
+        for root, dirs, files in os.walk(self.corpus_path):
+            for file in files:
+                if file.endswith(".parquet"):
+                    files_list.append(self.read_file(os.path.join(root, file)))
+        return files_list
+
+
