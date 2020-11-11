@@ -8,7 +8,10 @@ from document import Document
 
 class Parse:
 
-    MINIMAL_NUMBER_LENGTH = 3
+    THOUSAND = 1000
+    MILLION = 1000000
+    BILLION = 1000000000
+    TRILLION = 1000000000000
 
     def __init__(self):
         self.stop_words = stopwords.words('english')
@@ -38,29 +41,52 @@ class Parse:
 
     def parse_numbers(self, all_tokens_list, token, num_type):
 
+        def convert_to_final(token, start, end, type):
+            if token in range(start, end):
+                token /= start
+                if token.is_integer():
+                    token = int(token)
+                all_tokens_list.append(str(token) + type)
+
         # not last token in the test
         if num_type:
-            if num_type.lower() == 'percent' or num_type.lower() == 'percentage':
+            l_num_type = num_type.lower()
+
+        if num_type:
+            if l_num_type == 'percent' or l_num_type == 'percentage':
                 all_tokens_list.append(token+'%')
 
         if '%' in token:
             all_tokens_list.append(token)
-        if ',' in token:
+        elif ',' in token:
             token = token.replace(',', '')
-            if len(token > Parse.MINIMAL_NUMBER_LENGTH):
-                short_num = self.handle_big_numbers(token)
+        try:
+            token = float(token)
+        except:
+            return
+        if num_type:
+            if l_num_type.startswith('thousand'):
+                token *= Parse.THOUSAND
+            elif l_num_type.startswith('million'):
+                token *= Parse.MILLION
+            elif l_num_type.startswith('billion'):
+                token *= Parse.BILLION
+
+        if token in range(0, Parse.THOUSAND):
+            if token.is_integer():
+                token = int(token)
+            all_tokens_list.append(str(token))
+        elif token in range(Parse.THOUSAND, Parse.MILLION):
+            convert_to_final(token, Parse.THOUSAND, Parse.MILLION, 'K')
+        elif token in range(Parse.MILLION, Parse.BILLION):
+            convert_to_final(token, Parse.MILLION, Parse.BILLION, 'M')
+        elif token in range(Parse.BILLION, Parse.TRILLION):
+            convert_to_final(token, Parse.BILLION, Parse.TRILLION, 'B')
+
 
     def has_numbers(self, input_string):
         return any(char.isdigit() for char in input_string)
 
-    # ONLY BIG NUMBERS!
-    def handle_big_numbers(self, big_number):
-        len = len(big_number)
-        # k
-        big_number = big_number.strip('0')
-
-        # if len > 3 and len < 7:
-        return None
 
     def parse_sentence(self, text):
         """
@@ -87,11 +113,16 @@ class Parse:
             elif token.startswith('http'):
                 self.parse_url(tokenized_text, token)
             elif self.has_numbers(token):
-                num_type = None
-                if i < (len(text_tokens) - 1):
-                    num_type = text_tokens[i]
-                self.parse_numbers(tokenized_text, token, num_type)
-
+                    num_type = None
+                    if i < (len(text_tokens) - 1):
+                        num_type = text_tokens[i + 1]
+                    self.parse_numbers(tokenized_text, token, num_type)
+                #if not token.isnumeric():
+                    #tokenized_text.append(token)
+                    # need to remove all not letter and numbers from str - covid-19
+                    # tokenized_text += re.split('(\d+)', token)
+                    # tokenized_text += re.split('(\-\d+)', token)
+                #else:
 
         return tokenized_text
 
