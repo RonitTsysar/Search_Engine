@@ -16,19 +16,27 @@ class Parse:
     def __init__(self):
         self.stop_words = stopwords.words('english')
 
-    # TODO - check append instead of +=
-    def parse_hashtag(self, all_tokens_list , token):
-        final = [token]
-        tok = token[1:]
-
+    def parse_hashtag(self, all_tokens_list, token):
+        t = []
+        # --> #stay_at_home
         if '_' in token:
-            final += tok.split('_')
+            t.append(re.sub(r'_', '', token))
+            token = token[1:]
+            t += re.split(r'_', token)
         else:
-            final += re.findall(r'[a-zA-Z0-9](?:[a-z0-9]+|[A-Z0-9]*(?=[A-Z]|$))', tok)
+            # --> #stayAtHome
+            if not token.isupper():
+                t.append(token)
+                t += re.findall('[A-Z][^A-Z]*', token)
+            # --> #ASD
+            else:
+                all_tokens_list.append(token)
+                return
 
-        final = [x.lower() for x in final]
-        all_tokens_list += final
+        t = [x.lower() for x in t]
+        all_tokens_list += t
 
+    # TODO - recheck
     def parse_url(self, all_tokens_list, token):
         url = re.split('[/://?=]', token)
 
@@ -39,6 +47,7 @@ class Parse:
                 url.insert(i, split_address[0])
         all_tokens_list += url
 
+    # TODO - recheck
     def parse_numbers(self, all_tokens_list, token, num_type):
 
         def convert_to_final(token, start, end, type):
@@ -99,7 +108,6 @@ class Parse:
 
         tokenized_text = []
 
-        # text_tokens = text.split(' ')
         text_tokens = re.split(' |\n\n|\n', text)
         # need to remove whitespace
         # text_tokens = re.split('[' '][\n\nn]', text)
