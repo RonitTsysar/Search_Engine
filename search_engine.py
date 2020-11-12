@@ -29,7 +29,8 @@ def run_engine():
             number_of_documents += 1
             # index the document data
             indexer.add_new_doc(parsed_document)
-    print('Finished pars ing and indexing. Starting to export files')
+    print('Finished parsing and indexing. Starting to export files')
+
     # TODO delete after QA
     print(f'number_of_files : {number_of_files}')
     print(f'number_of_documents : {number_of_documents}')
