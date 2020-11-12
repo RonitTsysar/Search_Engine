@@ -15,6 +15,7 @@ class Parse:
 
     def __init__(self):
         self.stop_words = stopwords.words('english')
+        self.small_big_letters_dict = {}
 
     def parse_hashtag(self, all_tokens_list, token):
         t = []
@@ -38,7 +39,7 @@ class Parse:
 
     # TODO - recheck
     def parse_url(self, all_tokens_list, token):
-        url = re.split('[/://?=]', token)
+        url = re.findall(r"[\w'|.]+", token)
 
         for i, elem in enumerate(url):
             if 'www' in elem:
@@ -84,6 +85,10 @@ class Parse:
         if token in range(0, Parse.THOUSAND):
             if token.is_integer():
                 token = int(token)
+                if num_type:
+                    t = re.match('\d+/\d+', num_type)
+                    if t:
+                        all_tokens_list.append(f'{token} {t}')
             all_tokens_list.append(str(token))
         elif token in range(Parse.THOUSAND, Parse.MILLION):
             convert_to_final(token, Parse.THOUSAND, Parse.MILLION, 'K')
@@ -96,6 +101,16 @@ class Parse:
     def has_numbers(self, input_string):
         return any(char.isdigit() for char in input_string)
 
+
+    # @Gal
+    '''def update_upper_letter_dict(self, token):
+        l_token = token.lower()
+        if l_token in Parse.upper_letter:
+            seen_lower = Parse.upper_letter[l_token]
+            if seen_lower == False and token[0].islower():
+                Parse.upper_letter[l_token] = True
+        else:
+            Parse.upper_letter[l_token] = token[0].islower()'''
 
     def parse_sentence(self, text):
         """
@@ -113,6 +128,20 @@ class Parse:
         # text_tokens = re.split('[' '][\n\nn]', text)
 
         for i, token in enumerate(text_tokens):
+
+            # maintain doc
+            # TRUE - we sow lower case
+            # FALSE - we didnt see lower case
+            if token.isalpha():
+                if token[0].islower():
+                    if token not in self.small_big_letters_dict.keys() or not self.small_big_letters_dict[token]:
+                        self.small_big_letters_dict[token] = True
+                elif token.lower() not in self.small_big_letters_dict.keys():
+                    self.small_big_letters_dict[token.lower()] = False
+            # @GAL
+            '''if token.isalpha():
+                self.update_upper_letter_dict(token)'''
+
             if token.startswith('#'):
                 self.parse_hashtag(tokenized_text, token)
             elif token.startswith('@'):
@@ -121,16 +150,10 @@ class Parse:
             elif token.startswith('http'):
                 self.parse_url(tokenized_text, token)
             elif self.has_numbers(token):
-                    num_type = None
-                    if i < (len(text_tokens) - 1):
-                        num_type = text_tokens[i + 1]
-                    self.parse_numbers(tokenized_text, token, num_type)
-                #if not token.isnumeric():
-                    #tokenized_text.append(token)
-                    # need to remove all not letter and numbers from str - covid-19
-                    # tokenized_text += re.split('(\d+)', token)
-                    # tokenized_text += re.split('(\-\d+)', token)
-                #else:
+                num_type = None
+                if i < (len(text_tokens) - 1):
+                    num_type = text_tokens[i + 1]
+                self.parse_numbers(tokenized_text, token, num_type)
 
         return tokenized_text
 
@@ -164,5 +187,3 @@ class Parse:
         document = Document(tweet_id, tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
                             quote_url, term_dict, doc_length)
         return document
-
-
