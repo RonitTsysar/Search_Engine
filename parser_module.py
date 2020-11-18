@@ -1,10 +1,11 @@
 import re
 from urllib.parse import urlparse
-
+import json
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from document import Document
-
+import timeit
+from itertools import chain
 
 class Parse:
 
@@ -15,6 +16,8 @@ class Parse:
 
     def __init__(self):
         self.stop_words = stopwords.words('english')
+        self.stop_words.extend(['!', ':', '&'])
+
         self.small_big_letters_dict = {}
 
     def parse_hashtag(self, all_tokens_list, token):
@@ -38,7 +41,7 @@ class Parse:
         all_tokens_list += t
 
     # TODO - recheck
-    def parse_url(self, all_tokens_list, token):
+    def parse_url(self, token):
         url = re.findall(r"[\w'|.]+", token)
 
         for i, elem in enumerate(url):
@@ -46,7 +49,7 @@ class Parse:
                 split_address = url[i].split('.', 1)
                 url[i] = split_address[1]
                 url.insert(i, split_address[0])
-        all_tokens_list += url
+        return url
 
     # TODO - recheck
     def parse_numbers(self, all_tokens_list, token, num_type):
@@ -118,16 +121,27 @@ class Parse:
         :param text:
         :return:
         """
-        # text_tokens = word_tokenize(text)
-        # text_tokens_without_stopwords = [w.lower() for w in text_tokens if w not in self.stop_words]
 
         tokenized_text = []
-
-        text_tokens = re.split(' |\n\n|\n', text)
-        # need to remove whitespace
-        # text_tokens = re.split('[' '][\n\nn]', text)
+        text_tokens = word_tokenize(text)
 
         for i, token in enumerate(text_tokens):
+
+            if token in self.stop_words:
+                continue
+
+            if self.is_emoji(token):
+                continue
+
+            if token == '@':
+                if i < (len(text) - 1):
+                    tokenized_text.append(token + text_tokens[i+1])
+
+            elif token == '#':
+                self.parse_hashtag(tokenized_text, token)
+
+
+            # TODO - still to finished
 
             # maintain doc
             # TRUE - we sow lower case
@@ -142,14 +156,7 @@ class Parse:
             '''if token.isalpha():
                 self.update_upper_letter_dict(token)'''
 
-            if token.startswith('#'):
-                self.parse_hashtag(tokenized_text, token)
-            elif token.startswith('@'):
-                tokenized_text.append(token)
-            # starts with http & https
-            elif token.startswith('http'):
-                self.parse_url(tokenized_text, token)
-            elif self.has_numbers(token):
+            if self.has_numbers(token):
                 num_type = None
                 if i < (len(text_tokens) - 1):
                     num_type = text_tokens[i + 1]
@@ -157,7 +164,44 @@ class Parse:
 
         return tokenized_text
 
-        # return text_tokens_without_stopwords
+
+    def get_urls(self, all_urls):
+        urls = {}
+        for url in all_urls:
+            if url:
+                urls.update(dict(json.loads(url)))
+        return urls
+
+    def get_texts(self, all_texts):
+        final_text = ""
+        for text in all_texts:
+            if text:
+               final_text += text
+        return final_text
+
+    def is_emoji(self, all_texts):
+
+        emoji_pattern = re.compile("["
+                                   u"\U0001F600-\U0001F64F"  # emoticons
+                                   u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                                   u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                                   u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                                   u"\U00002500-\U00002BEF"  # chinese char
+                                   u"\U00002702-\U000027B0"
+                                   u"\U00002702-\U000027B0"
+                                   u"\U000024C2-\U0001F251"
+                                   u"\U0001f926-\U0001f937"
+                                   u"\U00010000-\U0010ffff"
+                                   u"\u2640-\u2642"
+                                   u"\u2600-\u2B55"
+                                   u"\u200d"
+                                   u"\u23cf"
+                                   u"\u23e9"
+                                   u"\u231a"
+                                   u"\ufe0f"  # dingbats
+                                   u"\u3030"
+                                   "]+", flags=re.UNICODE)
+        return re.match(emoji_pattern, all_texts)
 
     def parse_doc(self, doc_as_list):
         """
@@ -169,12 +213,69 @@ class Parse:
         tweet_date = doc_as_list[1]
         full_text = doc_as_list[2]
         url = doc_as_list[3]
-        retweet_text = doc_as_list[4]
-        retweet_url = doc_as_list[5]
-        quote_text = doc_as_list[6]
-        quote_url = doc_as_list[7]
+        # indices = doc_as_list[4]
+        retweet_text = doc_as_list[5]
+        retweet_url = doc_as_list[6]
+        # retweet_indices = doc_as_list[7]
+        quote_text = doc_as_list[8]
+        quote_url = doc_as_list[9]
+        # quote_indice = doc_as_list[10]
+        retweet_quoted_text = doc_as_list[11]
+        retweet_quoted_urls = doc_as_list[12]
+        # retweet_quoted_indices = doc_as_list[13]
         term_dict = {}
-        tokenized_text = self.parse_sentence(full_text)
+
+        # TODO delete after QA
+        # print(f'tweet_id -> {tweet_id}')
+        # print(f'tweet_date -> {tweet_date}')
+        # print('--- full_text ---')
+        # print(full_text)
+        # print('-----------------')
+        # print('--- url ---')
+        # print(url)
+        # print('-----------------')
+        # print('--- indices ---')
+        # print(indices)
+        # print('-----------------')
+        # print('--- retweet_text ---')
+        # print(retweet_text)
+        # print('-----------------')
+        # print('--- retweet_url ---')
+        # print(retweet_url)
+        # print('-----------------')
+        # print('--- retweet_indices ---')
+        # print(retweet_indices)
+        # print('-----------------')
+        # print('--- quote_text ---')
+        # print(quote_text)
+        # print('-----------------')
+        # print('--- quote_url ---')
+        # print(quote_url)
+        # print('-----------------')
+        # print('--- quote_indice ---')
+        # print(quote_indice)
+        # print('-----------------')
+        # print('--- retweet_quoted_text ---')
+        # print(retweet_quoted_text)
+        # print('-----------------')
+        # print('--- retweet_quoted_urls ---')
+        # print(retweet_quoted_urls)
+        # print('-----------------')
+        # print('--- retweet_quoted_indices ---')
+        # print(retweet_quoted_indices)
+        # print('-----------------')
+
+        tokenized_text = []
+        # parse all urls
+        urls = self.get_urls([url, retweet_url, quote_url, retweet_quoted_urls])
+        for url in urls.values():
+            tokenized_text += self.parse_url(url)
+
+        all_texts = self.get_texts([full_text, quote_text, retweet_quoted_text])
+        # all_texts = self.remove_emojis(all_texts)
+
+        # TODO - maybe remove urls here
+        tokenized_text = self.parse_sentence(all_texts)
 
         doc_length = len(tokenized_text)  # after text operations.
 
@@ -184,6 +285,8 @@ class Parse:
             else:
                 term_dict[term] += 1
 
+        # TODO - we need to think what send to the Document
         document = Document(tweet_id, tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
                             quote_url, term_dict, doc_length)
+
         return document
