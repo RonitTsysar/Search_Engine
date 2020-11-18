@@ -4,7 +4,7 @@ from parser_module import Parse
 from indexer import Indexer
 from searcher import Searcher
 import utils
-
+import timeit
 
 def run_engine():
     """
@@ -29,6 +29,7 @@ def run_engine():
             number_of_documents += 1
             # index the document data
             indexer.add_new_doc(parsed_document)
+
     print('Finished parsing and indexing. Starting to export files')
 
     # TODO delete after QA
