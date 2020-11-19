@@ -23,8 +23,10 @@ def run_engine():
     for file in files_list:
         # Iterate over every document in the file
         number_of_files += 1
+        # parsed_document = p.parse_doc(file[79])
         for idx, document in enumerate(file):
             # parse the document
+            print(idx)
             parsed_document = p.parse_doc(document)
             number_of_documents += 1
             # index the document data

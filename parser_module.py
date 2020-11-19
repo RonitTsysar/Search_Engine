@@ -16,7 +16,7 @@ class Parse:
 
     def __init__(self):
         self.stop_words = stopwords.words('english')
-        self.stop_words.extend(['!', ':', '&'])
+        self.stop_words.extend(['!', ':', '&', 'RT', 'http', 'https'])
 
         self.small_big_letters_dict = {}
 
@@ -24,23 +24,21 @@ class Parse:
         t = []
         # --> #stay_at_home
         if '_' in token:
-            t.append(re.sub(r'_', '', token))
-            token = token[1:]
+            t.append('#' + re.sub(r'_', '', token))
             t += re.split(r'_', token)
         else:
             # --> #stayAtHome
             if not token.isupper():
-                t.append(token)
+                t.append('#' + token)
                 t += re.findall('[A-Z][^A-Z]*', token)
             # --> #ASD
             else:
-                all_tokens_list.append(token)
+                all_tokens_list.append('#' + token)
                 return
 
         t = [x.lower() for x in t]
         all_tokens_list += t
 
-    # TODO - recheck
     def parse_url(self, token):
         url = re.findall(r"[\w'|.]+", token)
 
@@ -51,58 +49,71 @@ class Parse:
                 url.insert(i, split_address[0])
         return url
 
-    # TODO - recheck
-    def parse_numbers(self, all_tokens_list, token, num_type):
+    def parse_numbers(self, all_tokens_list, token, after_token, before_token):
 
-        def convert_to_final(token, start, end, type):
+        def convert_to_final(token, start, end, before_t, after_t):
             if token in range(start, end):
                 token /= start
                 if token.is_integer():
                     token = int(token)
-                all_tokens_list.append(str(token) + type)
+                if before_t:
+                    if before_t == '$':
+                        all_tokens_list.append(str(token) + after_t + before_t)
+                        return
+                all_tokens_list.append(str(token) + after_t)
 
         # not last token in the test
-        if num_type:
-            l_num_type = num_type.lower()
+        if after_token:
+            l_num_type = after_token.lower()
 
-        if num_type:
-            if l_num_type == 'percent' or l_num_type == 'percentage':
+            if l_num_type == 'percent' or l_num_type == 'percentage' or l_num_type == '%':
                 all_tokens_list.append(token+'%')
+                return
+            if l_num_type == '$':
+                all_tokens_list.append(token+'$')
+                return
 
-        if '%' in token:
-            all_tokens_list.append(token)
-        elif ',' in token:
+        if ',' in token:
             token = token.replace(',', '')
+
+        t = re.match('\d+/\d+', token)
+        if t:
+            all_tokens_list.append(token)
+
         try:
             token = float(token)
         except:
+            print('token -------------> ' + token)
             return
-        if num_type:
+
+        if after_token:
             if l_num_type.startswith('thousand'):
                 token *= Parse.THOUSAND
             elif l_num_type.startswith('million'):
                 token *= Parse.MILLION
             elif l_num_type.startswith('billion'):
                 token *= Parse.BILLION
+            elif l_num_type.startswith('trillion'):
+                token *= Parse.TRILLION
 
         if token in range(0, Parse.THOUSAND):
             if token.is_integer():
                 token = int(token)
-                if num_type:
-                    t = re.match('\d+/\d+', num_type)
+                if after_token:
+                    t = re.match('\d+/\d+', after_token)
                     if t:
                         all_tokens_list.append(f'{token} {t}')
+                if before_token:
+                    if before_token == '$':
+                        all_tokens_list.append(token+'$')
             all_tokens_list.append(str(token))
-        elif token in range(Parse.THOUSAND, Parse.MILLION):
-            convert_to_final(token, Parse.THOUSAND, Parse.MILLION, 'K')
-        elif token in range(Parse.MILLION, Parse.BILLION):
-            convert_to_final(token, Parse.MILLION, Parse.BILLION, 'M')
-        elif token in range(Parse.BILLION, Parse.TRILLION):
-            convert_to_final(token, Parse.BILLION, Parse.TRILLION, 'B')
+        elif Parse.THOUSAND <= token < Parse.MILLION:
+            convert_to_final(token, Parse.THOUSAND, Parse.MILLION, before_token, 'K')
+        elif Parse.MILLION <= token < Parse.BILLION:
+            convert_to_final(token, Parse.MILLION, Parse.BILLION, before_token,'M')
+        elif Parse.BILLION <= token < Parse.TRILLION:
+            convert_to_final(token, Parse.BILLION, Parse.TRILLION, before_token, 'B')
 
-
-    def has_numbers(self, input_string):
-        return any(char.isdigit() for char in input_string)
 
 
     # @Gal
@@ -125,7 +136,10 @@ class Parse:
         tokenized_text = []
         text_tokens = word_tokenize(text)
 
-        for i, token in enumerate(text_tokens):
+        # for i, token in enumerate(text_tokens):
+
+        for i in range(len(text_tokens)-1):
+            token = text_tokens[i]
 
             if token in self.stop_words:
                 continue
@@ -136,17 +150,31 @@ class Parse:
             if token == '@':
                 if i < (len(text) - 1):
                     tokenized_text.append(token + text_tokens[i+1])
+                    i += 2
 
             elif token == '#':
-                self.parse_hashtag(tokenized_text, token)
+                self.parse_hashtag(tokenized_text, text_tokens[i+1])
+                i += 2
 
+            pattern = '[\d+[/|.|,]?\d+]*'
+            number_match = re.match(pattern, token)
+            if number_match:
+                start, stop = number_match.span()
+                if (stop - start) == len(token):
+                    after_t = None
+                    if i < (len(text_tokens) - 1):
+                        after_t = text_tokens[i + 1]
+                    before_t = None
+                    if i > 0:
+                        before_t = text_tokens[i - 1]
+                    self.parse_numbers(tokenized_text, token, after_t, before_t)
 
             # TODO - still to finished
 
             # maintain doc
             # TRUE - we sow lower case
             # FALSE - we didnt see lower case
-            if token.isalpha():
+            elif token.isalpha():
                 if token[0].islower():
                     if token not in self.small_big_letters_dict.keys() or not self.small_big_letters_dict[token]:
                         self.small_big_letters_dict[token] = True
@@ -156,11 +184,6 @@ class Parse:
             '''if token.isalpha():
                 self.update_upper_letter_dict(token)'''
 
-            if self.has_numbers(token):
-                num_type = None
-                if i < (len(text_tokens) - 1):
-                    num_type = text_tokens[i + 1]
-                self.parse_numbers(tokenized_text, token, num_type)
 
         return tokenized_text
 
@@ -275,6 +298,8 @@ class Parse:
         # all_texts = self.remove_emojis(all_texts)
 
         # TODO - maybe remove urls here
+        print(tweet_id)
+        print(all_texts)
         tokenized_text = self.parse_sentence(all_texts)
 
         doc_length = len(tokenized_text)  # after text operations.
