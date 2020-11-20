@@ -7,8 +7,8 @@ from document import Document
 import timeit
 from itertools import chain
 
-class Parse:
 
+class Parse:
     THOUSAND = 1000
     MILLION = 1000000
     BILLION = 1000000000
@@ -67,10 +67,10 @@ class Parse:
             l_num_type = after_token.lower()
 
             if l_num_type == 'percent' or l_num_type == 'percentage' or l_num_type == '%':
-                all_tokens_list.append(token+'%')
+                all_tokens_list.append(token + '%')
                 return
             if l_num_type == '$':
-                all_tokens_list.append(token+'$')
+                all_tokens_list.append(token + '$')
                 return
 
         if ',' in token:
@@ -105,16 +105,14 @@ class Parse:
                         all_tokens_list.append(f'{token} {t}')
                 if before_token:
                     if before_token == '$':
-                        all_tokens_list.append(token+'$')
+                        all_tokens_list.append(token + '$')
             all_tokens_list.append(str(token))
         elif Parse.THOUSAND <= token < Parse.MILLION:
             convert_to_final(token, Parse.THOUSAND, Parse.MILLION, before_token, 'K')
         elif Parse.MILLION <= token < Parse.BILLION:
-            convert_to_final(token, Parse.MILLION, Parse.BILLION, before_token,'M')
+            convert_to_final(token, Parse.MILLION, Parse.BILLION, before_token, 'M')
         elif Parse.BILLION <= token < Parse.TRILLION:
             convert_to_final(token, Parse.BILLION, Parse.TRILLION, before_token, 'B')
-
-
 
     # @Gal
     '''def update_upper_letter_dict(self, token):
@@ -138,7 +136,7 @@ class Parse:
 
         # for i, token in enumerate(text_tokens):
 
-        for i in range(len(text_tokens)-1):
+        for i in range(len(text_tokens) - 1):
             token = text_tokens[i]
 
             if token in self.stop_words:
@@ -149,13 +147,14 @@ class Parse:
 
             if token == '@':
                 if i < (len(text) - 1):
-                    tokenized_text.append(token + text_tokens[i+1])
+                    tokenized_text.append(token + text_tokens[i + 1])
                     i += 2
 
             elif token == '#':
-                self.parse_hashtag(tokenized_text, text_tokens[i+1])
+                self.parse_hashtag(tokenized_text, text_tokens[i + 1])
                 i += 2
 
+            # checks numbers patterns
             pattern = '[\d+[/|.|,]?\d+]*'
             number_match = re.match(pattern, token)
             if number_match:
@@ -184,23 +183,21 @@ class Parse:
             '''if token.isalpha():
                 self.update_upper_letter_dict(token)'''
 
-
         return tokenized_text
 
+    # def get_urls(self, all_urls):
+    #     urls = {}
+    #     for url in all_urls:
+    #         if url:
+    #             urls.update(dict(json.loads(url)))
+    #     return urls
 
-    def get_urls(self, all_urls):
-        urls = {}
-        for url in all_urls:
-            if url:
-                urls.update(dict(json.loads(url)))
-        return urls
-
-    def get_texts(self, all_texts):
-        final_text = ""
-        for text in all_texts:
-            if text:
-               final_text += text
-        return final_text
+    # def get_texts(self, all_texts):
+    #     final_text = ""
+    #     for text in all_texts:
+    #         if text:
+    #            final_text += text
+    #     return final_text
 
     def is_emoji(self, all_texts):
 
@@ -290,17 +287,30 @@ class Parse:
 
         tokenized_text = []
         # parse all urls
-        urls = self.get_urls([url, retweet_url, quote_url, retweet_quoted_urls])
-        for url in urls.values():
+        # urls = self.get_urls([url, retweet_url, quote_url, retweet_quoted_urls])
+        all_urls = [url, retweet_url, quote_url, retweet_quoted_urls]
+        urls = set()
+        for url in all_urls:
+            if url:
+                dict_url = dict(json.loads(url))
+                urls.update(dict_url.values())
+        # for url in urls.values():
+        for url in urls:
             tokenized_text += self.parse_url(url)
 
-        all_texts = self.get_texts([full_text, quote_text, retweet_quoted_text])
+        # concatenate all texts
+        all_texts = [full_text, quote_text, retweet_quoted_text]
+        final_text = ""
+        for text in all_texts:
+            if text:
+                final_text += text
+        # all_texts = self.get_texts([full_text, quote_text, retweet_quoted_text])
         # all_texts = self.remove_emojis(all_texts)
 
         # TODO - maybe remove urls here
         print(tweet_id)
-        print(all_texts)
-        tokenized_text = self.parse_sentence(all_texts)
+        print(final_text)
+        tokenized_text = self.parse_sentence(final_text)
 
         doc_length = len(tokenized_text)  # after text operations.
 
