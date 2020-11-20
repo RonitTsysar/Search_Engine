@@ -1,11 +1,8 @@
 import re
-from urllib.parse import urlparse
 import json
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from document import Document
-import timeit
-from itertools import chain
 
 
 class Parse:
@@ -13,12 +10,23 @@ class Parse:
     MILLION = 1000000
     BILLION = 1000000000
     TRILLION = 1000000000000
+    QUANTITIES = {'thousand': 'T', 'thousands': 'T',
+                  'million': 'M', 'millions': 'M',
+                  'billion': 'B', 'billions': 'B',
+                  'trillion': 'TR', 'trillions': 'TR'}
+    SIGNS = {'$': '$', 'usd': '$'}
+    QUANTITIES_LIST = ['T','M','B','TR']
 
     def __init__(self):
         self.stop_words = stopwords.words('english')
-        self.stop_words.extend(['!', ':', '&', 'RT', 'http', 'https'])
+        self.stop_words.extend(['!', ':', '&', 'RT'])
+        self.stop_words_dict = dict.fromkeys(self.stop_words)
 
         self.small_big_letters_dict = {}
+
+        self.url_pattern = re.compile('http\S+')
+        self.url_www_pattern = re.compile("[\w'|.]+")
+        self.numbers_pattern = re.compile('\d+[/|.|,]*\d+')
 
     def parse_hashtag(self, all_tokens_list, token):
         t = []
@@ -38,166 +46,6 @@ class Parse:
 
         t = [x.lower() for x in t]
         all_tokens_list += t
-
-    def parse_url(self, token):
-        url = re.findall(r"[\w'|.]+", token)
-
-        for i, elem in enumerate(url):
-            if 'www' in elem:
-                split_address = url[i].split('.', 1)
-                url[i] = split_address[1]
-                url.insert(i, split_address[0])
-        return url
-
-    def parse_numbers(self, all_tokens_list, token, after_token, before_token):
-
-        def convert_to_final(token, start, end, before_t, after_t):
-            if token in range(start, end):
-                token /= start
-                if token.is_integer():
-                    token = int(token)
-                if before_t:
-                    if before_t == '$':
-                        all_tokens_list.append(str(token) + after_t + before_t)
-                        return
-                all_tokens_list.append(str(token) + after_t)
-
-        # not last token in the test
-        if after_token:
-            l_num_type = after_token.lower()
-
-            if l_num_type == 'percent' or l_num_type == 'percentage' or l_num_type == '%':
-                all_tokens_list.append(token + '%')
-                return
-            if l_num_type == '$':
-                all_tokens_list.append(token + '$')
-                return
-
-        if ',' in token:
-            token = token.replace(',', '')
-
-        t = re.match('\d+/\d+', token)
-        if t:
-            all_tokens_list.append(token)
-
-        try:
-            token = float(token)
-        except:
-            print('token -------------> ' + token)
-            return
-
-        if after_token:
-            if l_num_type.startswith('thousand'):
-                token *= Parse.THOUSAND
-            elif l_num_type.startswith('million'):
-                token *= Parse.MILLION
-            elif l_num_type.startswith('billion'):
-                token *= Parse.BILLION
-            elif l_num_type.startswith('trillion'):
-                token *= Parse.TRILLION
-
-        if token in range(0, Parse.THOUSAND):
-            if token.is_integer():
-                token = int(token)
-                if after_token:
-                    t = re.match('\d+/\d+', after_token)
-                    if t:
-                        all_tokens_list.append(f'{token} {t}')
-                if before_token:
-                    if before_token == '$':
-                        all_tokens_list.append(token + '$')
-            all_tokens_list.append(str(token))
-        elif Parse.THOUSAND <= token < Parse.MILLION:
-            convert_to_final(token, Parse.THOUSAND, Parse.MILLION, before_token, 'K')
-        elif Parse.MILLION <= token < Parse.BILLION:
-            convert_to_final(token, Parse.MILLION, Parse.BILLION, before_token, 'M')
-        elif Parse.BILLION <= token < Parse.TRILLION:
-            convert_to_final(token, Parse.BILLION, Parse.TRILLION, before_token, 'B')
-
-    # @Gal
-    '''def update_upper_letter_dict(self, token):
-        l_token = token.lower()
-        if l_token in Parse.upper_letter:
-            seen_lower = Parse.upper_letter[l_token]
-            if seen_lower == False and token[0].islower():
-                Parse.upper_letter[l_token] = True
-        else:
-            Parse.upper_letter[l_token] = token[0].islower()'''
-
-    def parse_sentence(self, text):
-        """
-        This function tokenize, remove stop words and apply lower case for every word within the text
-        :param text:
-        :return:
-        """
-
-        tokenized_text = []
-        text_tokens = word_tokenize(text)
-
-        # for i, token in enumerate(text_tokens):
-
-        for i in range(len(text_tokens) - 1):
-            token = text_tokens[i]
-
-            if token in self.stop_words:
-                continue
-
-            if self.is_emoji(token):
-                continue
-
-            if token == '@':
-                if i < (len(text) - 1):
-                    tokenized_text.append(token + text_tokens[i + 1])
-                    i += 2
-
-            elif token == '#':
-                self.parse_hashtag(tokenized_text, text_tokens[i + 1])
-                i += 2
-
-            # checks numbers patterns
-            pattern = '[\d+[/|.|,]?\d+]*'
-            number_match = re.match(pattern, token)
-            if number_match:
-                start, stop = number_match.span()
-                if (stop - start) == len(token):
-                    after_t = None
-                    if i < (len(text_tokens) - 1):
-                        after_t = text_tokens[i + 1]
-                    before_t = None
-                    if i > 0:
-                        before_t = text_tokens[i - 1]
-                    self.parse_numbers(tokenized_text, token, after_t, before_t)
-
-            # TODO - still to finished
-
-            # maintain doc
-            # TRUE - we sow lower case
-            # FALSE - we didnt see lower case
-            elif token.isalpha():
-                if token[0].islower():
-                    if token not in self.small_big_letters_dict.keys() or not self.small_big_letters_dict[token]:
-                        self.small_big_letters_dict[token] = True
-                elif token.lower() not in self.small_big_letters_dict.keys():
-                    self.small_big_letters_dict[token.lower()] = False
-            # @GAL
-            '''if token.isalpha():
-                self.update_upper_letter_dict(token)'''
-
-        return tokenized_text
-
-    # def get_urls(self, all_urls):
-    #     urls = {}
-    #     for url in all_urls:
-    #         if url:
-    #             urls.update(dict(json.loads(url)))
-    #     return urls
-
-    # def get_texts(self, all_texts):
-    #     final_text = ""
-    #     for text in all_texts:
-    #         if text:
-    #            final_text += text
-    #     return final_text
 
     def is_emoji(self, all_texts):
 
@@ -222,6 +70,154 @@ class Parse:
                                    u"\u3030"
                                    "]+", flags=re.UNICODE)
         return re.match(emoji_pattern, all_texts)
+
+    def parse_numbers(self, all_tokens_list, token, before_token, after_token):
+        def helper(num):
+            count = -1
+            while num >= 1000:
+                num /= 1000
+                count += 1
+            return ("%.3f" % num), count
+
+        if '/' in token:
+            all_tokens_list.append(token)
+            return
+        if ',' in token:
+            token = token.replace(',', '')
+
+        try:
+            token = float(token)
+        except:
+            print('token --------------------> ' + token)
+            return
+
+        if token.is_integer():
+            token = int(token)
+
+        b_tok = None
+        is_pers = None
+
+        if before_token and before_token in Parse.SIGNS:
+            b_tok = Parse.SIGNS[before_token]
+
+        if after_token:
+            after_token = after_token.lower()
+
+            if after_token in Parse.QUANTITIES:
+
+                if token < 1000:
+                    if b_tok:
+                        all_tokens_list.append(str(token) + Parse.QUANTITIES[after_token] + b_tok)
+                        return
+                    else:
+                        all_tokens_list.append(str(token) + Parse.QUANTITIES[after_token])
+                        return
+                # if we have after and token > 1000
+                num, count = helper(token)
+                i = Parse.QUANTITIES_LIST.index(Parse.QUANTITIES[after_token])
+                after_token = Parse.QUANTITIES_LIST[i + count]
+                all_tokens_list.append(str(num) + after_token)
+                return
+
+            if after_token == 'percent' or after_token == 'percentage' or after_token == '%':
+                is_pers = True
+
+        if token < 1000:
+            final_t = str(token)
+        else:
+            num, count = helper(token)
+            after = Parse.QUANTITIES_LIST[count]
+            final_t = str(num) + after
+
+        if b_tok:
+            all_tokens_list.append(str(final_t) + b_tok)
+        elif is_pers:
+            all_tokens_list.append(str(final_t) + '%')
+        else:
+            all_tokens_list.append(str(final_t))
+
+
+    def parse_sentence(self, text):
+        """
+        This function tokenize, remove stop words and apply lower case for every word within the text
+        :param text:
+        :return:
+        """
+        tokenized_text = []
+        text_tokens = word_tokenize(text)
+
+        #TODO - fix the skipping (i+=2) it doest work
+        for i in range(len(text_tokens) - 1):
+            token = text_tokens[i]
+
+            if token in self.stop_words_dict:
+                continue
+
+            if self.is_emoji(token):
+                continue
+
+            if token == '@':
+                if i < (len(text_tokens) - 1):
+                    tokenized_text.append(token + text_tokens[i + 1])
+                    i += 2  # skip the next token
+                    continue
+
+            if token == '#':
+                if i < (len(text_tokens) - 1):
+                    self.parse_hashtag(tokenized_text, text_tokens[i + 1])
+                    i += 2  # skip the next token
+                    continue
+
+            # NUMBERS
+            number_match = self.numbers_pattern.match(token)
+            if number_match:
+                start, stop = number_match.span()
+                if (stop - start) == len(token):
+                    before_t = None
+                    after_t = None
+                    if i < (len(text_tokens) - 1):
+                        after_t = text_tokens[i + 1]
+                    if i > 0:
+                        before_t = text_tokens[i - 1]
+                    self.parse_numbers(tokenized_text, token, before_t, after_t)
+                    continue
+
+
+            # maintain doc
+            # TRUE - we sow lower case
+            # FALSE - we didnt see lower case
+            elif token.isalpha():
+                if token[0].islower():
+                    if token not in self.small_big_letters_dict.keys() or not self.small_big_letters_dict[token]:
+                        self.small_big_letters_dict[token] = True
+                elif token.lower() not in self.small_big_letters_dict.keys():
+                    self.small_big_letters_dict[token.lower()] = False
+
+        print(f'tokenized_text --> {tokenized_text}')
+        return tokenized_text
+
+    def parse_url(self, token):
+        url = self.url_www_pattern.findall(token)
+        for i, elem in enumerate(url):
+            if 'www' in elem:
+                split_address = url[i].split('.', 1)
+                url[i] = split_address[1]
+                url.insert(i, split_address[0])
+        return url
+
+    def get_urls(self, all_urls):
+        urls = {}
+        for url in all_urls:
+            if url:
+                urls.update(dict(json.loads(url)))
+        return urls
+
+    def get_texts(self, all_texts):
+        final_text = ""
+        for text in all_texts:
+            if text:
+                final_text += ' ' + text
+        return final_text
 
     def parse_doc(self, doc_as_list):
         """
@@ -248,8 +244,8 @@ class Parse:
         # TODO delete after QA
         # print(f'tweet_id -> {tweet_id}')
         # print(f'tweet_date -> {tweet_date}')
-        # print('--- full_text ---')
-        # print(full_text)
+        print('--- full_text ---')
+        print(full_text)
         # print('-----------------')
         # print('--- url ---')
         # print(url)
@@ -287,30 +283,17 @@ class Parse:
 
         tokenized_text = []
         # parse all urls
-        # urls = self.get_urls([url, retweet_url, quote_url, retweet_quoted_urls])
-        all_urls = [url, retweet_url, quote_url, retweet_quoted_urls]
-        urls = set()
-        for url in all_urls:
-            if url:
-                dict_url = dict(json.loads(url))
-                urls.update(dict_url.values())
-        # for url in urls.values():
-        for url in urls:
-            tokenized_text += self.parse_url(url)
+        urls = self.get_urls([url, retweet_url, quote_url, retweet_quoted_urls])
+        for (key, value) in urls.items():
+            if value:
+                tokenized_text += self.parse_url(value)
+            elif key:
+                tokenized_text += self.parse_url(key)
 
-        # concatenate all texts
-        all_texts = [full_text, quote_text, retweet_quoted_text]
-        final_text = ""
-        for text in all_texts:
-            if text:
-                final_text += text
-        # all_texts = self.get_texts([full_text, quote_text, retweet_quoted_text])
-        # all_texts = self.remove_emojis(all_texts)
-
-        # TODO - maybe remove urls here
-        print(tweet_id)
-        print(final_text)
-        tokenized_text = self.parse_sentence(final_text)
+        all_texts = self.get_texts([full_text, quote_text, retweet_quoted_text])
+        # remove urls from text TODO - think what else to remove
+        all_texts = self.url_pattern.sub('', all_texts)
+        tokenized_text = self.parse_sentence(all_texts)
 
         doc_length = len(tokenized_text)  # after text operations.
 
