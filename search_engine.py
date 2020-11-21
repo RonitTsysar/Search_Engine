@@ -5,6 +5,7 @@ from indexer import Indexer
 from searcher import Searcher
 import utils
 import timeit
+from tqdm import tqdm
 
 def run_engine():
     """
@@ -23,14 +24,14 @@ def run_engine():
     for file in files_list:
         # Iterate over every document in the file
         number_of_files += 1
-        # parsed_document = p.parse_doc(file[1002])
-        for idx, document in enumerate(file):
-            print(f' id: {idx}')
+        # parsed_document = p.parse_doc(file[114])
+        for idx, document in tqdm(enumerate(file)):
+            # print(f' id: {idx}')
             # parse the document
             parsed_document = p.parse_doc(document)
             number_of_documents += 1
             # index the document data
-            indexer.add_new_doc(parsed_document)
+            # indexer.add_new_doc(parsed_document)
 
     print('Finished parsing and indexing. Starting to export files')
 

@@ -5,6 +5,9 @@ class Indexer:
         self.postingDict = {}
         self.config = config
 
+        # inverted_idx - {term : [df, total_tf?]}
+        # postingDict - {term : {tweet_id: [tf, max_tf, amount_unique]}}
+
     def add_new_doc(self, document):
         """
         This function perform indexing process for a document object.
@@ -19,12 +22,29 @@ class Indexer:
             try:
                 # Update inverted index and posting
                 if term not in self.inverted_idx.keys():
-                    self.inverted_idx[term] = 1
-                    self.postingDict[term] = []
-                else:
-                    self.inverted_idx[term] += 1
+                    # without total_tf
+                    # self.inverted_idx[term] = 1
+                    # with total_tf
+                    self.inverted_idx[term] = [1]
 
-                self.postingDict[term].append((document.tweet_id, document_dictionary[term]))
+                    # self.postingDict[term] = []
+                    self.postingDict[term] = {}
+
+                # updates df
+                else:
+                    self.inverted_idx[term] += 1  # without total_tf
+                    self.inverted_idx[term][0] += 1  # with total_tf
+
+                # TODO - do we need to save total tf (from practice) ??
+                self.inverted_idx[term][1] += len(document_dictionary[term])
+
+                # self.postingDict[term].append((document.tweet_id, document_dictionary[term]))
+
+                # TODO - decide if save in term dict parser only location/ tf+location
+                # self.postingDict[term][document.tweet_id] = [[document_dictionary[term][0], document.max_tf, len(document.unique_terms)]]
+                self.postingDict[term][document.tweet_id] = [[len(document_dictionary[term]), document.max_tf, len(document.unique_terms)]]
+
+
 
             except:
                 print('problem with the following key {}'.format(term[0]))
