@@ -3,6 +3,7 @@ import json
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from document import Document
+from stemmer import Stemmer
 
 
 class Parse:
@@ -17,7 +18,9 @@ class Parse:
     SIGNS = {'$': '$', 'usd': '$'}
     QUANTITIES_LIST = ['K','M','B','TR']
 
-    def __init__(self):
+    def __init__(self, with_stem):
+        self.with_stem = with_stem
+        self.stemmer = Stemmer()
         self.stop_words = stopwords.words('english')
         self.stop_words.extend(['!', '?', '', ':', ';', '(', ')', '[', ']', '{', '}' '&', 'rt', ' ', '$', '.', '"', "‘"])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
@@ -147,6 +150,10 @@ class Parse:
 
             token = text_tokens[i]
 
+            if self.with_stem:
+                token = self.stemmer.stem_term(token)
+                
+
             # if token in self.stop_words_dict:
             #     continue
 
@@ -249,6 +256,7 @@ class Parse:
         return tokenized_text
 
     # TODO - fix urls
+    # \\date=07-21-2020
     # 'https://www-foxnews-com.cdn.ampproject.org/c/s/www.foxnews.com/media/hydroxychloroquine-could-save-lives-ingraham-yale-professor.amp'
     def parse_url(self, token):
         url = self.url_www_pattern.findall(token)

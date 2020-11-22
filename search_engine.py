@@ -7,7 +7,7 @@ import utils
 import timeit
 from tqdm import tqdm
 
-def run_engine():
+def run_engine(with_stem):
     """
 
     :return:
@@ -15,7 +15,7 @@ def run_engine():
 
     config = ConfigClass()
     r = ReadFile(corpus_path=config.get__corpusPath())
-    p = Parse()
+    p = Parse(with_stem)
     indexer = Indexer(config)
     number_of_documents = 0
     number_of_files = 0
@@ -31,7 +31,7 @@ def run_engine():
             parsed_document = p.parse_doc(document)
             number_of_documents += 1
             # index the document data
-            # indexer.add_new_doc(parsed_document)
+            indexer.add_new_doc(parsed_document)
 
     print('Finished parsing and indexing. Starting to export files')
 
@@ -58,8 +58,8 @@ def search_and_rank_query(query, inverted_index, k):
     return searcher.ranker.retrieve_top_k(ranked_docs, k)
 
 
-def main():
-    run_engine()
+def main(with_stem):
+    run_engine(with_stem)
     query = input("Please enter a query: ")
     k = int(input("Please enter number of docs to retrieve: "))
     inverted_index = load_index()
