@@ -1,19 +1,27 @@
+import math
 import pickle
+from collections import OrderedDict
+
 
 class Indexer:
 
     DOCS_NUM_IN_POSTING = 500
 
     def __init__(self, config):
-        self.inverted_idx = {}
-        self.postingDict = {}
+        # STRUCTURE OF INDEX
+        # inverted_idx - {term : df} ----------> # inverted_idx - {term : idf}
+        # inverted_idx - {term : [df, idf, total_tf]} ???
+        # postingDict - {term : {tweet_id: [normalized_tf, tf, max_tf, unique_amount]}}
+
+        self.inverted_idx = OrderedDict()
+        self.postingDict = OrderedDict()
+        # self.inverted_idx = {}
+        # self.postingDict = {}
         self.config = config
 
         self.posting_files_counter = 1
         self.num_of_files_in_posting = 0
-        # STRUCTURE OF INDEX
-        # inverted_idx - {term : [df, total_tf?]}
-        # postingDict - {term : {tweet_id: [tf, max_tf, amount_unique]}}
+
 
     def add_new_doc(self, document):
         """
@@ -31,30 +39,42 @@ class Indexer:
             try:
                 # Update inverted index and posting
                 if term not in self.inverted_idx.keys():
-                    # without total_tf
-                    # self.inverted_idx[term] = 1
-
-                    # with total_tf
-                    self.inverted_idx[term] = [1, 0]
-                    self.postingDict[term] = {}
+                    # only df, without total_tf
+                    self.inverted_idx[term] = 1
+                    self.postingDict[term] = OrderedDict()
 
                 # updates df
                 else:
-                    # self.inverted_idx[term] += 1  # without total_tf
-                    self.inverted_idx[term][0] += 1  # with total_tf
+                    self.inverted_idx[term] += 1
 
-                # TODO - do we need to save total tf (from practice) ??
-                tf = len(document_dictionary[term])
-                self.inverted_idx[term][1] += tf
-
-                # self.postingDict[term].append((document.tweet_id, document_dictionary[term]))
-
-                # TODO - decide if save in term dict parser only location/ tf+location
-                # self.postingDict[term][document.tweet_id] = [[document_dictionary[term][0], document.max_tf, len(document.unique_terms)]]
-                self.postingDict[term][document.tweet_id] = [tf, document.max_tf, len(document.unique_terms)]
+                tf = document_dictionary[term]
+                normalized_tf = tf/document.max_tf  # or float(tf/document.max_tf)
+                self.postingDict[term][document.tweet_id] = [normalized_tf, tf, document.max_tf, document.unique_terms_amount]
 
             except:
+                print(self.postingDict[term][document.tweet_id])
                 print('problem with the following key {}'.format(term[0]))
+
+            # TODO - decide or save df and total tf or only df
+            # try:
+            #     # Update inverted index and posting
+            #     if term not in self.inverted_idx.keys():
+            #         # with total_tf
+            #         self.inverted_idx[term] = [1, 0]
+            #         self.postingDict[term] = {}
+            #
+            #     # updates df
+            #     else:
+            #         self.inverted_idx[term][0] += 1  # with total_tf
+            #
+            #     tf = len(document_dictionary[term])
+            #     self.inverted_idx[term][1] += tf
+            #
+            #     self.postingDict[term][document.tweet_id] = [normalized_tf, tf, document.max_tf, document.unique_terms_amount]
+            #
+            # except:
+            #     print('problem with the following key {}'.format(term[0]))
+
 
         ################################################################
         #                    save to files - Ronit
@@ -71,3 +91,17 @@ class Indexer:
             self.num_of_files_in_posting = 0
             self.postingDict = {}
 
+
+    # Calculate idf for each term in inverted index after finish indexing
+    def calculate_idf(self, N):
+        for term, df in self.inverted_idx.items():
+            idf = math.log2(N/df)
+            self.inverted_idx[term] = idf
+
+        # map(lambda x,n: math.log2(n/x[0]), self.inverted_idx.iteritems())
+
+    # def calculate_tf_idf(self):
+    #     for term, value in self.postingDict.items():
+    #         idf = self.inverted_idx[term]
+    #         tf_idf = value[0] * idf
+    #         self.postingDict[term][tweet_id]

@@ -28,7 +28,7 @@ def run_engine(with_stem):
         for idx, document in tqdm(enumerate(file)):
             # print(f' id: {idx}')
             # parse the document
-            print(number_of_documents)
+            # print(number_of_documents)
             parsed_document = p.parse_doc(document)
             number_of_documents += 1
             # index the document data

@@ -22,13 +22,12 @@ class Parse:
         self.with_stem = with_stem
         self.stemmer = Stemmer()
         self.stop_words = stopwords.words('english')
-        self.stop_words.extend(['!', '?', '', ':', ';', '(', ')', '[', ']', '{', '}' '&', 'rt', ' ', '$', '.', '"', "‘"])
+        self.stop_words.extend(['!', '?', '', ':', ';', '(', ')', '[', ']', '{', '}' '&', 'rt', ' ', '$', '.', '"', '“', "‘", '\'s', '\'ve', ])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
 
         self.small_big_letters_dict = {}
         # TODO - check if need to save in dict {entity : counter}
         self.entities = []
-        self.unique_terms = []
 
         self.url_pattern = re.compile('http\S+')
         self.url_www_pattern = re.compile("[\w'|.]+")
@@ -84,7 +83,7 @@ class Parse:
         try:
             token = float(token)
         except:
-            # print('token --------------------> ' + token)
+            print('token --------------------> ' + token)
             return
 
         if token.is_integer():
@@ -126,7 +125,7 @@ class Parse:
                 after = Parse.QUANTITIES_LIST[count]
                 final_t = str(num) + after
             except:
-                print()
+                print("prblem in parse numbers: " + token)
 
         if b_tok:
             all_tokens_list.append(b_tok + str(final_t))
@@ -152,7 +151,7 @@ class Parse:
 
             if self.with_stem:
                 token = self.stemmer.stem_term(token)
-                
+
 
             # if token in self.stop_words_dict:
             #     continue
@@ -197,11 +196,15 @@ class Parse:
                     self.parse_numbers(tokenized_text, token, before_t, after_t, text_tokens)
                     continue
 
-            # TODO parse URL after the tokenization - change the func
-            # url_match = self.url_pattern.match(token)
-            # if url_match:
-            #     tokenized_text += self.parse_url(token)
-            #     continue
+
+            url_match = self.url_pattern.match(token)
+            if url_match:
+                if i+2 < len(text_tokens):
+                    if text_tokens[i+2]:
+                        tokenized_text += self.parse_url(text_tokens[i+2])
+                        text_tokens[i + 1] = ' '  # skip the next token
+                        text_tokens[i + 2] = ' '  # skip the next token
+                        continue
 
             # TODO - try to unite entities and upper letter dict updates!
             # maintain doc
@@ -258,17 +261,25 @@ class Parse:
     # TODO - fix urls
     # \\date=07-21-2020
     # 'https://www-foxnews-com.cdn.ampproject.org/c/s/www.foxnews.com/media/hydroxychloroquine-could-save-lives-ingraham-yale-professor.amp'
+    # def parse_url(self, token):
+    #     url = self.url_www_pattern.findall(token)
+    #     for i, elem in enumerate(url):
+    #         if 'www' in elem:
+    #             split_address = url[i].split('.', 1)
+    #             try:
+    #                 url[i] = split_address[1]
+    #                 url.insert(i, split_address[0])
+    #             except:
+    #                 print("problem with url in tweet: " +token)
+    #     return url
+
     def parse_url(self, token):
-        url = self.url_www_pattern.findall(token)
-        for i, elem in enumerate(url):
-            if 'www' in elem:
-                split_address = url[i].split('.', 1)
-                try:
-                    url[i] = split_address[1]
-                    url.insert(i, split_address[0])
-                except:
-                    print()
-        return url
+        split_url = re.split('[/://?=]', token)
+        if 't.co' in split_url or 'twitter.com' in split_url:
+            return [split_url[-1]]
+        if len(split_url) > 3 and 'www.' in split_url[3]:
+            split_url[3] = split_url[3][4:]
+        return [t.lower() for t in split_url if (t != 'https' and t != '')]
 
     def get_urls(self, all_urls):
         urls = {}
@@ -363,26 +374,37 @@ class Parse:
 
         # handle url
         tokenized_text = self.parse_sentence(all_texts)
+        unique_terms = set(tokenized_text)
 
         doc_length = len(tokenized_text)  # after text operations.
 
-        max_tf = 0
+        max_tf = 1
 
-        # for term in tokenized_text:
+        # save only tf for each term in tweet
         for index, term in enumerate(tokenized_text):
             if term not in term_dict.keys():
-                term_dict[term] = [index]
+                term_dict[term] = 1
 
             else:
-                term_dict[term].append(index)
-                if len(term_dict[term]) > max_tf:
-                    max_tf = len(term_dict[term])
+                term_dict[term] += 1
+                if term_dict[term] > max_tf:
+                    max_tf = term_dict[term]
+
+        # TODO - decide if save tf and locations for each term in tweet, or only tf
+        # for index, term in enumerate(tokenized_text):
+        #     if term not in term_dict.keys():
+        #         term_dict[term] = [index]
+        #
+        #     else:
+        #         term_dict[term].append(index)
+        #         if len(term_dict[term]) > max_tf:
+        #             max_tf = len(term_dict[term])
 
 
 
         # TODO - we need to think what send to the Document
         # self.unique_terms, self.entities - definition and location
-        document = Document(tweet_id, max_tf, self.entities, self.small_big_letters_dict, self.unique_terms, tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
+        document = Document(tweet_id, max_tf, self.entities, self.small_big_letters_dict, len(unique_terms), tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
                             quote_url, term_dict, doc_length)
 
         return document
