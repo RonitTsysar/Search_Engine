@@ -22,7 +22,7 @@ class Parse:
         self.with_stem = with_stem
         self.stemmer = Stemmer()
         self.stop_words = stopwords.words('english')
-        self.stop_words.extend(['!', '?', '', ':', ';', '(', ')', '[', ']', '{', '}' '&', 'rt', ' ', '$', '.', '"', '“', "‘", '\'s', '\'ve', ])
+        self.stop_words.extend(['!', '?', '', ':', ';', '(', ')', '[', ']', '{', '}' '&', 'rt', ' ', '$', '.', '"', '“', "‘", "'", "`", '\'s', '\'ve', ])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
 
         self.small_big_letters_dict = {}

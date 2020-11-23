@@ -41,7 +41,7 @@ def run_engine(with_stem):
     print(f'number_of_documents : {number_of_documents}')
 
     utils.save_obj(indexer.inverted_idx, "inverted_idx")
-    utils.save_obj(indexer.postingDict, "posting")
+    utils.save_obj(indexer.posting_dict, "posting")
 
 
 def load_index():
