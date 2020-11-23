@@ -24,10 +24,11 @@ def run_engine(with_stem):
     for file in files_list:
         # Iterate over every document in the file
         number_of_files += 1
-        # parsed_document = p.parse_doc(file[114])
+        parsed_document = p.parse_doc(file[463])
         for idx, document in tqdm(enumerate(file)):
             # print(f' id: {idx}')
             # parse the document
+            print(number_of_documents)
             parsed_document = p.parse_doc(document)
             number_of_documents += 1
             # index the document data
