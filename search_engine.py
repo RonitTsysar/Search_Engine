@@ -20,8 +20,8 @@ def run_engine(with_stem):
     number_of_documents = 0
     number_of_files = 0
 
-    files_list = r.read_corpus()
-    for file in files_list:
+    # files_list = r.read_corpus()
+    for file in r.read_corpus():
         # Iterate over every document in the file
         number_of_files += 1
         parsed_document = p.parse_doc(file[463])
@@ -32,7 +32,7 @@ def run_engine(with_stem):
             parsed_document = p.parse_doc(document)
             number_of_documents += 1
             # index the document data
-            indexer.add_new_doc(parsed_document)
+            # indexer.add_new_doc(parsed_document)
 
     print('Finished parsing and indexing. Starting to export files')
 
