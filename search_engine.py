@@ -34,6 +34,7 @@ def run_engine(with_stem):
             # index the document data
             indexer.add_new_doc(parsed_document)
 
+        indexer.calculate_idf(number_of_documents)
     print('Finished parsing and indexing. Starting to export files')
 
     # TODO delete after QA
