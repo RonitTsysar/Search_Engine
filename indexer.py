@@ -67,38 +67,7 @@ class Indexer:
             # saving files with pickle - TODO - give path to save this files
             if self.num_of_terms_in_posting == Indexer.TERM_NUM_IN_POSTING:
                 self.save_posting()
-               #  # TODO - RONIT - bisect - check how to keep list sorted by doc_id
-               #  # sort keys(terms)
-               #  self.posting_dict = {key: self.posting_dict[key] for key in sorted(self.posting_dict)}
-               # # TODO - change to utils.save
-               #  with open(f'posting{self.posting_files_counter}.pickle', 'wb') as file:
-               #      # self.posting_files_counter += 1
-               #      pickle.dump(self.posting_dict, file)
-               #  # clean up
-               #  self.num_of_terms_in_posting = 0
-               #  self.posting_dict = {}
-               #  self.all_posting_dicts.append([self.posting_files_counter])
-               #  self.posting_files_counter += 1
 
-            # TODO - decide or save df and total tf or only df
-            # try:
-            #     # Update inverted index and posting
-            #     if term not in self.inverted_idx.keys():
-            #         # with total_tf
-            #         self.inverted_idx[term] = [1, 0]
-            #         self.postingDict[term] = {}
-            #
-            #     # updates df
-            #     else:
-            #         self.inverted_idx[term][0] += 1  # with total_tf
-            #
-            #     tf = len(document_dictionary[term])
-            #     self.inverted_idx[term][1] += tf
-            #
-            #     self.postingDict[term][document.tweet_id] = [normalized_tf, tf, document.max_tf, document.unique_terms_amount]
-            #
-            # except:
-            #     print('problem with the following key {}'.format(term[0]))
 
 
     def save_posting(self):
@@ -118,67 +87,6 @@ class Indexer:
         self.posting_files_counter += 1
         return {}
 
-
-    # not parallel
-    # def merge_all_postings(self):
-    #
-    #     while len(self.all_posting) > 1:
-    #         updated_posting_list = [] #new merged
-    #         i = 0
-    #
-    #         while i < len(self.all_posting): # choose 2 batches and send to merge
-    #
-    #             merged_posting = OrderedDict() #new dict
-    #             batch_merged_list = [] # added dicts
-    #             # lists of postings names (counter)
-    #             batch_1, batch_2 = self.all_posting[i], self.all_posting[i+1]
-    #             len_b1, len_b2 = len(batch_1), len(batch_2)
-    #             # idx_b1, idx_b2, pointer_pd1, pointer_pd2, batch_pointer = 0, 0, 0, 0, 0
-    #             idx_b1, idx_b2, pointer_pd1, pointer_pd2 = 0, 0, 0, 0
-    #
-    #             posting_dict_1 = utils.load_obj(self.all_posting[idx_b1])
-    #             posting_dict_2 = utils.load_obj(self.all_posting[idx_b2])
-    #             # batch_pointer = min(pointer_pd1, pointer_pd2)
-    #
-    #             # iterate through 2 lists of posting dicts
-    #             while idx_b1 < len_b1 and idx_b2 < len_b2:
-    #             # while batch_pointer < min(len_b1,len_b2):
-    #                 if idx_b1 >= len_b1:
-    #                     posting_dict_1 = utils.load_obj(self.all_posting[idx_b1])
-    #                     pointer_pd1 = 0
-    #                 elif idx_b2 >= len_b2:
-    #                     posting_dict_2 = utils.load_obj(self.all_posting[idx_b2])
-    #                     pointer_pd2 = 0
-    #
-    #                 keys_1 = list(posting_dict_1.keys())
-    #                 keys_2 = list(posting_dict_2.keys())
-    #
-    #                 # iterate through 2 posting dicts
-    #                 for comp_idx in enumerate(keys_1 if len(keys_1) < len(keys_2) else keys_2):
-    #                     # term in posting 1 < term in posting 2
-    #                     term_1, term_2 = keys_1[comp_idx], keys_2[comp_idx]
-    #                     if term_1 < term_2:
-    #                         merged_posting[term_1] = posting_dict_1[term_1]
-    #                         pointer_pd1 += 1
-    #                         # self.inverted_idx[term_1][1?] = self.posting_files_counter
-    #                     elif term_1 > term_2:
-    #                         merged_posting[term_2] = posting_dict_1[term_2]
-    #                         pointer_pd2 += 1
-    #                         # self.inverted_idx[term_2][1?] = self.posting_files_counter
-    #                     # else: # term1 == term2
-    #
-    #                     if len(merged_posting) == Indexer.TERM_NUM_IN_POSTING:
-    #                         merged_posting = self.helper_save_posting(merged_posting, batch_merged_list)
-    #
-    #                 # check which posting dict is finished
-    #                 if comp_idx  >= len(keys_1):
-    #                     idx_b1 += 1
-    #                 elif comp_idx >= len(keys_2):
-    #                     idx_b2 += 1
-    #
-    #         i += 2
-    #
-    #     self.all_posting = updated_posting_list
 
     def linspace(self, a, b, nsteps):
         """
@@ -314,7 +222,6 @@ class Indexer:
         return merged_list
 
 
-    # def merge_leftovers(self, longer_list, idx_list, idx_dict, merged_dict):
 
 
 
