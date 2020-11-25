@@ -32,8 +32,9 @@ class Parse:
         self.url_pattern = re.compile('http\S+')
         self.url_www_pattern = re.compile("[/://?=]")
         # TODO - fix numbers pattern
-        self.numbers_pattern_1 = re.compile('\d+[/|.|,]*\d+')
-        self.numbers_pattern_2 = re.compile('[\d+[/|.|,]?\d+]*')
+        # self.numbers_pattern_1 = re.compile('\d+[/|.|,]*\d+')
+        # self.numbers_pattern_2 = re.compile('[\d+[/|.|,]?\d+]*')
+        self.numbers_pattern = re.compile(('^\d+([/|.|,]?\d+)*'))
         # TODO - fix emoji to include all emojis
         self.emojis_pattern = re.compile(pattern="["
                                                 u"\U0001F600-\U0001F64F"  # emoticons
@@ -96,6 +97,8 @@ class Parse:
             token = float(token)
         except:
             print('token --------------------> ' + token)
+            # from this type - 10.07.2020
+            all_tokens_list.append(token)
             return
 
         if token.is_integer():
@@ -196,8 +199,8 @@ class Parse:
                     continue
 
             # NUMBERS
-            number_match = self.numbers_pattern_1.match(token) or self.numbers_pattern_2.match(token)
-            # number_match = self.numbers_pattern.match(token)
+            # number_match = self.numbers_pattern_1.match(token) or self.numbers_pattern_2.match(token)
+            number_match = self.numbers_pattern.match(token)
             if number_match:
                 # Numbers over TR
                 if len(token) > 12:
