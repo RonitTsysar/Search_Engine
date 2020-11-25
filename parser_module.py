@@ -16,7 +16,7 @@ class Parse:
                   'billion': 'B', 'billions': 'B',
                   'trillion': 'TR', 'trillions': 'TR'}
     SIGNS = {'$': '$', 'usd': '$'}
-    QUANTITIES_LIST = ['K','M','B','TR']
+    QUANTITIES_LIST = ['K', 'M', 'B', 'TR']
 
     def __init__(self, with_stem):
         self.with_stem = with_stem
@@ -30,7 +30,7 @@ class Parse:
         self.entities = []
 
         self.url_pattern = re.compile('http\S+')
-        self.url_www_pattern = re.compile("[\w'|.]+")
+        self.url_www_pattern = re.compile("[/://?=]")
         # TODO - fix numbers pattern
         self.numbers_pattern_1 = re.compile('\d+[/|.|,]*\d+')
         self.numbers_pattern_2 = re.compile('[\d+[/|.|,]?\d+]*')
@@ -40,8 +40,20 @@ class Parse:
                                                 u"\U0001F300-\U0001F5FF"  # symbols & pictographs
                                                 u"\U0001F680-\U0001F6FF"  # transport & map symbols
                                                 u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                                                u"\U00002500-\U00002BEF"  # chinese char
+                                                u"\U00010000-\U0010ffff"
+                                                u"\U0001f926-\U0001f937"
+                                                u"\U000024C2-\U0001F251"
+                                                u"\U00002702-\U000027B0"
+                                                u"\u2640-\u2642"
+                                                u"\u200d"
+                                                u"\u23cf"
+                                                u"\u23e9"
+                                                u"\u231a"
+                                                u"\ufe0f"
+                                                u"\u3030"
+                                                u"\u2600-\u2B55"
                                                 "]+", flags=re.UNICODE)
-
 
     def parse_hashtag(self, all_tokens_list, token):
         t = []
@@ -163,18 +175,24 @@ class Parse:
             if re.match(self.emojis_pattern, token):
                 token = self.emojis_pattern.sub(r'', token)
                 tokenized_text.append(token)
+
+                entity = ''
                 continue
 
             if token == '@':
                 if i < (len(text_tokens) - 1):
                     tokenized_text.append(token + text_tokens[i + 1])
                     text_tokens[i + 1] = ' ' # skip the next token
+
+                    entity = ''
                     continue
 
             if token == '#':
                 if i < (len(text_tokens) - 1):
                     self.parse_hashtag(tokenized_text, text_tokens[i + 1])
                     text_tokens[i + 1] = ' '  # skip the next token
+
+                    entity = ''
                     continue
 
             # NUMBERS
@@ -184,6 +202,8 @@ class Parse:
                 # Numbers over TR
                 if len(token) > 12:
                     tokenized_text.append(token)
+
+                    entity = ''
                     continue
                 start, stop = number_match.span()
                 if (stop - start) == len(token):
@@ -194,6 +214,8 @@ class Parse:
                     if i > 0:
                         before_t = text_tokens[i - 1]
                     self.parse_numbers(tokenized_text, token, before_t, after_t, text_tokens)
+
+                    entity = ''
                     continue
 
 
@@ -204,21 +226,31 @@ class Parse:
                         tokenized_text += self.parse_url(text_tokens[i+2])
                         text_tokens[i + 1] = ' '  # skip the next token
                         text_tokens[i + 2] = ' '  # skip the next token
+
+                        entity = ''
                         continue
 
-            # TODO - try to unite entities and upper letter dict updates!
-            # maintain doc
             # TRUE - we sow lower case
             # FALSE - we didnt see lower case
-
-            # if token.isalpha():
+            # combitation of ENTITY and small_big_letters
             if token.isalpha() and token.lower() not in self.stop_words:
+                if token[0].isupper():
+                    entity += token + ' '
+                    if token.lower() not in self.small_big_letters_dict.keys():
+                        self.small_big_letters_dict[token.lower()] = False
+                else:
+                    if len(entity) > 0:
+                        self.entities.append(entity[:-1])
+                        entity = ''
+                    if token not in self.small_big_letters_dict.keys() or not self.small_big_letters_dict[token]:
+                        self.small_big_letters_dict[token] = True
+
+            '''if token.isalpha() and token.lower() not in self.stop_words:
                 if token[0].islower():
                     if token not in self.small_big_letters_dict.keys() or not self.small_big_letters_dict[token]:
                         self.small_big_letters_dict[token] = True
                 elif token.lower() not in self.small_big_letters_dict.keys():
                     self.small_big_letters_dict[token.lower()] = False
-
 
             # ENTITY
             if token.isalpha() and token[0].isupper() and token.lower() not in self.stop_words:
@@ -227,27 +259,7 @@ class Parse:
                 if len(entity) > 0:
                     self.entities.append(entity[:-1])
                     entity = ''
-
-            # if token.isalpha():
-            #     if token.lower() not in self.stop_words_dict:
-            #         # UPPER letter dict
-            #         if token[0].islower():
-            #             if token not in self.small_big_letters_dict.keys() or not self.small_big_letters_dict[token]:
-            #                 self.small_big_letters_dict[token] = True
-            #         elif token.lower() not in self.small_big_letters_dict.keys():
-            #             self.small_big_letters_dict[token.lower()] = False
-            #
-            #         # ENTITY
-            #         if token[0].isupper():
-            #             entity += token + ' '
-            #         # elif token[0].islower() or token in self.stop_words_dict:
-            #         else:
-            #             if len(entity) > 0:
-            #                 self.entities.append(entity[:-1])
-            #                 entity = ''
-            #
-            #         token = token.lower()
-            #         tokenized_text.append(token)
+                    '''
 
             #TODO check if lower is ok here
             # append all regular words
@@ -274,7 +286,7 @@ class Parse:
     #     return url
 
     def parse_url(self, token):
-        split_url = re.split('[/://?=]', token)
+        split_url = self.url_www_pattern.split(token)
         if 't.co' in split_url or 'twitter.com' in split_url:
             return [split_url[-1]]
         if len(split_url) > 3 and 'www.' in split_url[3]:
