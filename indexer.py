@@ -1,6 +1,8 @@
 import math
 import pickle
 import bisect
+from concurrent.futures.thread import ThreadPoolExecutor
+
 import utils
 from multiprocessing import Pool
 from collections import OrderedDict
@@ -8,7 +10,7 @@ from collections import OrderedDict
 
 class Indexer:
 
-    TERM_NUM_IN_POSTING = 30000
+    TERM_NUM_IN_POSTING = 100000
 
     def __init__(self, config):
         # STRUCTURE OF INDEX
@@ -150,11 +152,12 @@ class Indexer:
 
             # if posting from left list is finished
             if pointer_pd1 == len(keys_1):
+                idx_left += 1
                 # there are more posting dicts in left
                 if idx_left < len(left)-1:
-                    idx_left += 1
-                    pointer_pd1 = 0
+                    # idx_left += 1
                     posting_dict_1 = utils.load_obj(str(left[idx_left]))
+                    pointer_pd1 = 0
                     keys_1 = list(posting_dict_1.keys())
                 # else:
                 #     if idx_right < len(right):
@@ -166,10 +169,11 @@ class Indexer:
                 #             pointer_pd2 += 1
 
             if pointer_pd2 == len(keys_2):
-                if idx_right < len((right))-1:
-                    idx_right += 1
-                    pointer_pd2 = 0
+                idx_right += 1
+                # pointer_pd2 = 0
+                if idx_right < len((right)):
                     posting_dict_2 = utils.load_obj(str(right[idx_right]))
+                    pointer_pd2 = 0
                     keys_2 = list(posting_dict_2.keys())
                 # else:
                 #     if idx_left < len(left):
@@ -182,35 +186,29 @@ class Indexer:
 
         # need to check if finish last dict in left instead of copying it again
 
-        posting_dict_2 = utils.load_obj(str(right[idx_right]))
-        keys_1 = list(posting_dict_1.keys())
-        keys_2 = list(posting_dict_2.keys())
-        pointer_pd1 = pointer_pd2 = 0
-        merged_posting = OrderedDict()
-
         # left list is not finished
-        while idx_left < len(left)-1:
-            # copying all leftovers from unfinished posting dict
-            while pointer_pd1 < len(keys_1)-1:
+        while idx_left < len(left):
+            # copying all terms from posting dict
+            while pointer_pd1 < len(keys_1):
                 if len(merged_posting) == Indexer.TERM_NUM_IN_POSTING:
                     merged_posting = self.save_in_merge(merged_posting, merged_list)
                 merged_posting[keys_1[pointer_pd1]] = posting_dict_1[keys_1[pointer_pd1]]
                 pointer_pd1 += 1
             idx_left += 1
-            if idx_left < len(left)-1:
+            if idx_left < len(left):
                 posting_dict_1 = utils.load_obj(str(left[idx_left]))
                 pointer_pd1 = 0
 
         # right list is not finished
-        while idx_right < len(right)-1:
+        while idx_right < len(right):
             # copying all leftovers from unfinished posting dict
-            while pointer_pd2 < len(keys_2)-1:
+            while pointer_pd2 < len(keys_2):
                 if len(merged_posting) == Indexer.TERM_NUM_IN_POSTING:
                     merged_posting = self.save_in_merge(merged_posting, merged_list)
                 merged_posting[keys_2[pointer_pd2]] = posting_dict_2[keys_2[pointer_pd2]]
                 pointer_pd2 += 1
             idx_right += 1
-            if idx_right < len(right)-1:
+            if idx_right < len(right):
                 posting_dict_2 = utils.load_obj(str(right[idx_right]))
                 pointer_pd2 = 0
 
@@ -219,10 +217,9 @@ class Indexer:
         # if idx_right == len(right):
         #     merged_list.extend(left[idx_left:])
 
+        merged_posting = self.save_in_merge(merged_posting, merged_list)
+
         return merged_list
-
-
-
 
 
     def merge_wrap(self, pair):
@@ -236,17 +233,23 @@ class Indexer:
         Looking at speedup.py, we get speedup by instantiating all the
         processes at the same level.
         """
-        # num_of_threads = 2 ** n
+        num_of_threads = 2 ** n
         # instantiate a Pool of workers
+        pool = ThreadPoolExecutor(num_of_threads)
         # pool = Pool(processes = num_of_threads)
         # Now we have a bunch of sorted sublists.  while there is more than
         # one, combine them with merge.
+        last_odd = None
         while len(self.all_posting) > 1:
             # get sorted sublist pairs to send to merge
+            if len(self.all_posting) % 2 != 0:
+                last_odd = self.all_posting.pop()
             list_of_pairs = [(self.all_posting[i], self.all_posting[i + 1]) \
                     for i in range(0, len(self.all_posting), 2)]
-            # self.all_posting = pool.map(self.merge_wrap, list_of_pairs)
-            test = self.merge_wrap(list_of_pairs[0])
+            self.all_posting = list(pool.map(self.merge_wrap, list_of_pairs))
+            if last_odd:
+                self.all_posting.append(last_odd)
+            # test = self.merge_wrap(list_of_pairs)
         # Since we start with numproc a power of two, there will always be an
         # even number of sorted sublists to pair up, until there is only one.
         self.all_posting = self.all_posting[0]

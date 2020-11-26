@@ -1,6 +1,7 @@
 class Ranker:
     def __init__(self):
         pass
+    # need to get vector of query
 
     @staticmethod
     def rank_relevant_doc(relevant_doc):
@@ -21,3 +22,4 @@ class Ranker:
         :return: list of relevant document
         """
         return sorted_relevant_doc[:k]
+
