@@ -22,7 +22,8 @@ class Parse:
         self.with_stem = with_stem
         self.stemmer = Stemmer()
         self.stop_words = stopwords.words('english')
-        self.stop_words.extend(['!', '?', '', ':', ';', '(', ')', '[', ']', '{', '}' '&', 'rt', ' ', '$', '.', '"', '“', "‘", "'", "`", '\'s', '\'ve', ])
+        self.stop_words.extend([r' ', r'', r"", r"''", r'""', r'"', r"“", r"”", r"’", r"‘", r"``", r"'", r"`"])
+        self.stop_words.extend(["rt", r'!', r'?', r',', r':', r';', r'(', r')', r'...', r'[', ']', r'{', '}' "'&'", '$', '.', r'\'s', '\'s', '\'d', r'\'d'])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
 
         self.small_big_letters_dict = {}
@@ -54,6 +55,7 @@ class Parse:
                                                 u"\ufe0f"
                                                 u"\u3030"
                                                 u"\u2600-\u2B55"
+                                                u"\uFE0F\u20E3\uFE0F\u20E3\uFE0F\u20E3"
                                                 "]+", flags=re.UNICODE)
 
     def parse_hashtag(self, all_tokens_list, token):
@@ -160,16 +162,12 @@ class Parse:
         text_tokens = word_tokenize(text)
         entity = ''
 
-        for i, term in enumerate(text_tokens):
+        for i, token in enumerate(text_tokens):
 
-            token = text_tokens[i]
+            # token = text_tokens[i]
 
             if self.with_stem:
                 token = self.stemmer.stem_term(token)
-
-
-            # if token in self.stop_words_dict:
-            #     continue
 
             if token == ' ':
                 continue
@@ -201,7 +199,7 @@ class Parse:
             # NUMBERS
             # number_match = self.numbers_pattern_1.match(token) or self.numbers_pattern_2.match(token)
             number_match = self.numbers_pattern.match(token)
-            if number_match:
+            if number_match != None:
                 # Numbers over TR
                 if len(token) > 12:
                     tokenized_text.append(token)
@@ -266,11 +264,15 @@ class Parse:
 
             #TODO check if lower is ok here
             # append all regular words
+            suffix = "…";
             token = token.lower()
-            if token not in self.stop_words_dict:
+            if token not in self.stop_words_dict and not token.endswith(suffix) and len(token) > 1:
                 tokenized_text.append(token)
 
         # print(f'tokenized_text --> {tokenized_text}')
+        for stop in self.stop_words_dict:
+            if stop in tokenized_text:
+                tokenized_text.remove(stop)
         return tokenized_text
 
     # TODO - fix urls
@@ -387,7 +389,6 @@ class Parse:
         if len(urls) > 0:
             all_texts = self.url_pattern.sub('', all_texts)
 
-        # handle url
         tokenized_text = self.parse_sentence(all_texts)
         unique_terms = set(tokenized_text)
 
@@ -405,21 +406,7 @@ class Parse:
                 if term_dict[term] > max_tf:
                     max_tf = term_dict[term]
 
-        # TODO - decide if save tf and locations for each term in tweet, or only tf
-        # for index, term in enumerate(tokenized_text):
-        #     if term not in term_dict.keys():
-        #         term_dict[term] = [index]
-        #
-        #     else:
-        #         term_dict[term].append(index)
-        #         if len(term_dict[term]) > max_tf:
-        #             max_tf = len(term_dict[term])
-
-
-
-        # TODO - we need to think what send to the Document
-        # self.unique_terms, self.entities - definition and location
-        document = Document(tweet_id, max_tf, self.entities, self.small_big_letters_dict, len(unique_terms), tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
-                            quote_url, term_dict, doc_length)
+        # TODO - check if we need to save tokenized_text
+        document = Document(tweet_id, max_tf, self.entities, self.small_big_letters_dict, len(unique_terms), tweet_date, term_dict, doc_length)
 
         return document
