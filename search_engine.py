@@ -24,17 +24,17 @@ def run_engine(with_stem):
     for file in r.read_corpus():
         # Iterate over every document in the file
         number_of_files += 1
-        # parsed_document = p.parse_doc(file[463])
-        # for idx in range(1000):
-        #     document = file[idx]
+        # is_last = False
         for idx, document in tqdm(enumerate(file)):
-            # print(f' id: {idx}')
             # parse the document
-            # print(number_of_documents)
             parsed_document = p.parse_doc(document)
             number_of_documents += 1
             # index the document data
+            # if idx == len(file)-1:
+            #     is_last = True
             indexer.add_new_doc(parsed_document)
+        # check if last posting not empty before saving
+        indexer.save_posting()
         indexer.merge_sort_parallel(3)
         indexer.calculate_idf(number_of_documents)
     print('Finished parsing and indexing. Starting to export files')

@@ -42,18 +42,14 @@ class Indexer:
             try:
                 # Update inverted index and posting
                 if term not in self.inverted_idx.keys():
-                    # self.inverted_idx[term] = 1
                     self.inverted_idx[term] = [1, self.posting_files_counter]
 
                 else:
-                    # self.inverted_idx[term] += 1
                     self.inverted_idx[term][0] += 1
 
                 tf = document_dictionary[term]
                 normalized_tf = tf/document.max_tf  # or float(tf/document.max_tf)
-                # print(self.posting_dict[term].keys())
 
-                # bisect.insort - keep the list sorted
                 if term not in self.posting_dict.keys():
                     self.posting_dict[term] = [(document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount)]
                 else:
@@ -62,14 +58,9 @@ class Indexer:
             except:
                 print('problem with the following key {}'.format(term[0]))
 
-
-            ################################################################
-            #                    save to files - Ronit
-            ################################################################
             # saving files with pickle - TODO - give path to save this files
             if self.num_of_terms_in_posting == Indexer.TERM_NUM_IN_POSTING:
                 self.save_posting()
-
 
 
     def save_posting(self):
@@ -82,13 +73,11 @@ class Indexer:
         self.all_posting.append([self.posting_files_counter])
         self.posting_files_counter += 1
 
-
     def save_in_merge(self, merged_posting, merged_list):
         utils.save_obj(merged_posting, str(self.posting_files_counter))
         merged_list.append(self.posting_files_counter)
         self.posting_files_counter += 1
         return {}
-
 
     def linspace(self, a, b, nsteps):
         """
@@ -221,7 +210,6 @@ class Indexer:
 
         return merged_list
 
-
     def merge_wrap(self, pair):
         l, r = pair
         return self.merge(l, r)
@@ -233,10 +221,9 @@ class Indexer:
         Looking at speedup.py, we get speedup by instantiating all the
         processes at the same level.
         """
-        num_of_threads = 2 ** n
+        # num_of_threads = 2 ** n
         # instantiate a Pool of workers
-        pool = ThreadPoolExecutor(num_of_threads)
-        # pool = Pool(processes = num_of_threads)
+        # pool = ThreadPoolExecutor(num_of_threads)
         # Now we have a bunch of sorted sublists.  while there is more than
         # one, combine them with merge.
         last_odd = None
@@ -246,15 +233,29 @@ class Indexer:
                 last_odd = self.all_posting.pop()
             list_of_pairs = [(self.all_posting[i], self.all_posting[i + 1]) \
                     for i in range(0, len(self.all_posting), 2)]
-            self.all_posting = list(pool.map(self.merge_wrap, list_of_pairs))
+            # self.all_posting = list(pool.map(self.merge_wrap, list_of_pairs))
+            self.all_posting = list(map(self.merge_wrap, list_of_pairs))
+
             if last_odd:
                 self.all_posting.append(last_odd)
+                last_odd = None
             # test = self.merge_wrap(list_of_pairs)
         # Since we start with numproc a power of two, there will always be an
         # even number of sorted sublists to pair up, until there is only one.
         self.all_posting = self.all_posting[0]
-
-
+        # test merge!
+        l = []
+        for i, name in enumerate(self.all_posting):
+            print(name)
+            dict = utils.load_obj(str(name))
+            keys = list(dict.keys())
+            l += keys
+        for key in l:
+            if l.count(key) > 1:
+                print('KAKI')
+            else:
+                print(".")
+        print()
     # Calculate idf for each term in inverted index after finish indexing
     def calculate_idf(self, N):
         for term, df in self.inverted_idx.items():
