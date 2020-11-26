@@ -9,10 +9,8 @@ from tqdm import tqdm
 
 def run_engine(with_stem):
     """
-
     :return:
     """
-
     config = ConfigClass()
     r = ReadFile(corpus_path=config.get__corpusPath())
     p = Parse(with_stem)
@@ -20,7 +18,6 @@ def run_engine(with_stem):
     number_of_documents = 0
     number_of_files = 0
 
-    # files_list = r.read_corpus()
     for file in r.read_corpus():
         # Iterate over every document in the file
         number_of_files += 1
@@ -35,13 +32,12 @@ def run_engine(with_stem):
             indexer.add_new_doc(parsed_document)
         # check if last posting not empty before saving
         indexer.save_posting()
-        indexer.merge_sort_parallel(3)
+        # TODO - delete after checks
+        # indexer.test_before_merge()
+        # TODO - fix parallel!!!
+        # indexer.merge_sort_parallel(3)
         indexer.calculate_idf(number_of_documents)
     print('Finished parsing and indexing. Starting to export files')
-
-    # TODO delete after QA
-    print(f'number_of_files : {number_of_files}')
-    print(f'number_of_documents : {number_of_documents}')
 
     utils.save_obj(indexer.inverted_idx, "inverted_idx")
     utils.save_obj(indexer.posting_dict, "posting")
@@ -53,12 +49,21 @@ def load_index():
     return inverted_index
 
 
-def search_and_rank_query(query, inverted_index, k):
-    p = Parse()
+def search_and_rank_query(query, inverted_index, k, with_stem):
+    p = Parse(with_stem)
     query_as_list = p.parse_sentence(query)
-    searcher = Searcher(inverted_index)
-    relevant_docs = searcher.relevant_docs_from_posting(query_as_list)
-    ranked_docs = searcher.ranker.rank_relevant_doc(relevant_docs)
+    searcher = Searcher(inverted_index, with_stem)
+
+    query_dict = searcher.get_query_dict(query_as_list)
+
+    relevant_docs, query_vector = searcher.relevant_docs_from_posting(query_dict)
+    ranked_docs = searcher.ranker.rank_relevant_docs(relevant_docs, query_vector)
+
+    # TODO - DELETE!!!
+    ranked = searcher.ranker.retrieve_top_k(ranked_docs, k)
+    for doc_tuple in ranked:
+        print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))
+
     return searcher.ranker.retrieve_top_k(ranked_docs, k)
 
 
@@ -67,5 +72,5 @@ def main(with_stem):
     query = input("Please enter a query: ")
     k = int(input("Please enter number of docs to retrieve: "))
     inverted_index = load_index()
-    for doc_tuple in search_and_rank_query(query, inverted_index, k):
+    for doc_tuple in search_and_rank_query(query, inverted_index, k, with_stem):
         print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))

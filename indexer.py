@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 class Indexer:
 
-    TERM_NUM_IN_POSTING = 100000
+    TERM_NUM_IN_POSTING = 500000
 
     def __init__(self, config):
         # STRUCTURE OF INDEX
@@ -63,15 +63,27 @@ class Indexer:
                 self.save_posting()
 
 
+    def test_before_merge(self):
+        l = []
+        for i, name in enumerate(self.all_posting):
+            name = name[0]
+            print(name)
+            dict = utils.load_obj(str(name))
+            keys = list(dict.keys())
+            l += keys
+        set_keys = set(l)
+        print()
+
     def save_posting(self):
-        # sort keys(terms)
-        self.posting_dict = {key: self.posting_dict[key] for key in sorted(self.posting_dict)}
-        utils.save_obj(self.posting_dict, str(self.posting_files_counter))
-        # clean up
-        self.num_of_terms_in_posting = 0
-        self.posting_dict = {}
-        self.all_posting.append([self.posting_files_counter])
-        self.posting_files_counter += 1
+        if len(self.posting_dict) > 0:
+            # sort keys(terms)
+            self.posting_dict = {key: self.posting_dict[key] for key in sorted(self.posting_dict)}
+            utils.save_obj(self.posting_dict, str(self.posting_files_counter))
+            # clean up
+            self.num_of_terms_in_posting = 0
+            self.posting_dict = {}
+            self.all_posting.append([self.posting_files_counter])
+            self.posting_files_counter += 1
 
     def save_in_merge(self, merged_posting, merged_list):
         utils.save_obj(merged_posting, str(self.posting_files_counter))
@@ -258,7 +270,7 @@ class Indexer:
         print()
     # Calculate idf for each term in inverted index after finish indexing
     def calculate_idf(self, N):
-        for term, df in self.inverted_idx.items():
-            idf = math.log2(N/df)
-            self.inverted_idx[term] = idf
+        for val in self.inverted_idx.values():
+            val[0] = math.log2(N/val[0])
+
 
