@@ -4,7 +4,7 @@ from parser_module import Parse
 from indexer import Indexer
 from searcher import Searcher
 import utils
-import timeit
+import time
 from tqdm import tqdm
 
 def run_engine(with_stem):
@@ -21,21 +21,23 @@ def run_engine(with_stem):
     for file in r.read_corpus():
         # Iterate over every document in the file
         number_of_files += 1
-        # is_last = False
+        is_last = False
         for idx, document in tqdm(enumerate(file)):
             # parse the document
             parsed_document = p.parse_doc(document)
             number_of_documents += 1
             # index the document data
-            # if idx == len(file)-1:
-            #     is_last = True
-            indexer.add_new_doc(parsed_document)
+            if idx == len(file)-1:
+                is_last = True
+            indexer.add_new_doc(parsed_document, is_last)
         # check if last posting not empty before saving
-        indexer.save_posting()
         # TODO - delete after checks
         # indexer.test_before_merge()
+        start = time.time()
         # TODO - fix parallel!!!
-        # indexer.merge_sort_parallel(3)
+
+        indexer.merge_sort_parallel(3)
+        print(time.time() - start)
         indexer.calculate_idf(number_of_documents)
     print('Finished parsing and indexing. Starting to export files')
 

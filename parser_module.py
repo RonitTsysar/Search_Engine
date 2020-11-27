@@ -26,15 +26,9 @@ class Parse:
         self.stop_words.extend(["rt", r'!', r'?', r',', r':', r';', r'(', r')', r'...', r'[', ']', r'{', '}' "'&'", '$', '.', r'\'s', '\'s', '\'d', r'\'d'])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
 
-        self.small_big_letters_dict = {}
-        # TODO - check if need to save in dict {entity : counter}
-        self.entities = []
-
         self.url_pattern = re.compile('http\S+')
         self.url_www_pattern = re.compile("[/://?=]")
         # TODO - fix numbers pattern
-        # self.numbers_pattern_1 = re.compile('\d+[/|.|,]*\d+')
-        # self.numbers_pattern_2 = re.compile('[\d+[/|.|,]?\d+]*')
         self.numbers_pattern = re.compile(('^\d+([/|.|,]?\d+)*'))
         # TODO - fix emoji to include all emojis
         self.emojis_pattern = re.compile(pattern="["
@@ -161,9 +155,12 @@ class Parse:
         tokenized_text = []
         text_tokens = word_tokenize(text)
         entity = ''
+        entity_counter = 0
+
+        entities_set = set()
+        small_big_dict = {}
 
         for i, token in enumerate(text_tokens):
-
             # token = text_tokens[i]
 
             if self.with_stem:
@@ -175,9 +172,10 @@ class Parse:
             # EMOJIS - extract the token without the emojis
             if re.match(self.emojis_pattern, token):
                 token = self.emojis_pattern.sub(r'', token)
-                tokenized_text.append(token)
+                tokenized_text.append(token.lower())
 
                 entity = ''
+                entity_counter = 0
                 continue
 
             if token == '@':
@@ -186,6 +184,7 @@ class Parse:
                     text_tokens[i + 1] = ' ' # skip the next token
 
                     entity = ''
+                    entity_counter = 0
                     continue
 
             if token == '#':
@@ -194,6 +193,7 @@ class Parse:
                     text_tokens[i + 1] = ' '  # skip the next token
 
                     entity = ''
+                    entity_counter = 0
                     continue
 
             # NUMBERS
@@ -205,6 +205,7 @@ class Parse:
                     tokenized_text.append(token)
 
                     entity = ''
+                    entity_counter = 0
                     continue
                 start, stop = number_match.span()
                 if (stop - start) == len(token):
@@ -217,8 +218,8 @@ class Parse:
                     self.parse_numbers(tokenized_text, token, before_t, after_t, text_tokens)
 
                     entity = ''
+                    entity_counter = 0
                     continue
-
 
             url_match = self.url_pattern.match(token)
             if url_match:
@@ -229,71 +230,56 @@ class Parse:
                         text_tokens[i + 2] = ' '  # skip the next token
 
                         entity = ''
+                        entity_counter = 0
                         continue
 
-            # TRUE - we sow lower case
-            # FALSE - we didnt see lower case
-            # combitation of ENTITY and small_big_letters
+            # ENTITY AND SMALL_BIG
             if token.isalpha() and token.lower() not in self.stop_words:
                 if token[0].isupper():
                     entity += token + ' '
-                    if token.lower() not in self.small_big_letters_dict.keys():
-                        self.small_big_letters_dict[token.lower()] = False
+                    entity_counter += 1
+                    continue
                 else:
-                    if len(entity) > 0:
-                        self.entities.append(entity[:-1])
+                    # entity dict -> decide >= 2 is an entity
+                    if entity_counter > 1:
+                        # self.entities.append(entity[:-1])
+                        entities_set.add(entity[:-1])
+                        tokenized_text.append(entity[:-1])
                         entity = ''
-                    if token not in self.small_big_letters_dict.keys() or not self.small_big_letters_dict[token]:
-                        self.small_big_letters_dict[token] = True
+                        entity_counter = 0
+                        continue
+                    # small_big dict for entity
+                    elif entity_counter == 1:
+                        entity = entity[:1]
+                        if entity not in small_big_dict.keys():
+                            small_big_dict[token.lower()] = False
 
-            '''if token.isalpha() and token.lower() not in self.stop_words:
-                if token[0].islower():
-                    if token not in self.small_big_letters_dict.keys() or not self.small_big_letters_dict[token]:
-                        self.small_big_letters_dict[token] = True
-                elif token.lower() not in self.small_big_letters_dict.keys():
-                    self.small_big_letters_dict[token.lower()] = False
+                    # now we have small leter token
+                    if token not in small_big_dict.keys() or not small_big_dict[token]:
+                        small_big_dict[token.lower()] = True
 
-            # ENTITY
-            if token.isalpha() and token[0].isupper() and token.lower() not in self.stop_words:
-                entity += token + ' '
-            else:
-                if len(entity) > 0:
-                    self.entities.append(entity[:-1])
-                    entity = ''
-                    '''
 
             #TODO check if lower is ok here
             # append all regular words
             suffix = "…";
-            token = token.lower()
+            # token = token.lower()
             if token not in self.stop_words_dict and not token.endswith(suffix) and len(token) > 1:
-                tokenized_text.append(token)
+                tokenized_text.append(token.lower())
 
         # print(f'tokenized_text --> {tokenized_text}')
         for stop in self.stop_words_dict:
             if stop in tokenized_text:
                 tokenized_text.remove(stop)
-        return tokenized_text
 
-    # TODO - fix urls
-    # \\date=07-21-2020
-    # 'https://www-foxnews-com.cdn.ampproject.org/c/s/www.foxnews.com/media/hydroxychloroquine-could-save-lives-ingraham-yale-professor.amp'
-    # def parse_url(self, token):
-    #     url = self.url_www_pattern.findall(token)
-    #     for i, elem in enumerate(url):
-    #         if 'www' in elem:
-    #             split_address = url[i].split('.', 1)
-    #             try:
-    #                 url[i] = split_address[1]
-    #                 url.insert(i, split_address[0])
-    #             except:
-    #                 print("problem with url in tweet: " +token)
-    #     return url
+        if token == "AAAAAAAAAAAAAAND":
+            print("RR")
+
+        return tokenized_text, entities_set, small_big_dict
 
     def parse_url(self, token):
         split_url = self.url_www_pattern.split(token)
         if 't.co' in split_url or 'twitter.com' in split_url:
-            return [split_url[-1]]
+            return [split_url[-1].lower()]
         if len(split_url) > 3 and 'www.' in split_url[3]:
             split_url[3] = split_url[3][4:]
         return [t.lower() for t in split_url if (t != 'https' and t != '')]
@@ -334,46 +320,6 @@ class Parse:
         # retweet_quoted_indices = doc_as_list[13]
         term_dict = {}
 
-        # TODO delete after QA
-        # print(f'tweet_id -> {tweet_id}')
-        # print(f'tweet_date -> {tweet_date}')
-        # print('--- full_text ---')
-        # print(full_text)
-        # print('-----------------')
-        # print('--- url ---')
-        # print(url)
-        # print('-----------------')
-        # print('--- indices ---')
-        # print(indices)
-        # print('-----------------')
-        # print('--- retweet_text ---')
-        # print(retweet_text)
-        # print('-----------------')
-        # print('--- retweet_url ---')
-        # print(retweet_url)
-        # print('-----------------')
-        # print('--- retweet_indices ---')
-        # print(retweet_indices)
-        # print('-----------------')
-        # print('--- quote_text ---')
-        # print(quote_text)
-        # print('-----------------')
-        # print('--- quote_url ---')
-        # print(quote_url)
-        # print('-----------------')
-        # print('--- quote_indice ---')
-        # print(quote_indice)
-        # print('-----------------')
-        # print('--- retweet_quoted_text ---')
-        # print(retweet_quoted_text)
-        # print('-----------------')
-        # print('--- retweet_quoted_urls ---')
-        # print(retweet_quoted_urls)
-        # print('-----------------')
-        # print('--- retweet_quoted_indices ---')
-        # print(retweet_quoted_indices)
-        # print('-----------------')
-
         tokenized_text = []
         # parse all urls
         urls = self.get_urls([url, retweet_url, quote_url, retweet_quoted_urls])
@@ -389,7 +335,7 @@ class Parse:
         if len(urls) > 0:
             all_texts = self.url_pattern.sub('', all_texts)
 
-        tokenized_text = self.parse_sentence(all_texts)
+        tokenized_text, entities_set, small_big = self.parse_sentence(all_texts)
         unique_terms = set(tokenized_text)
 
         doc_length = len(tokenized_text)  # after text operations.
@@ -407,6 +353,6 @@ class Parse:
                     max_tf = term_dict[term]
 
         # TODO - check if we need to save tokenized_text
-        document = Document(tweet_id, max_tf, self.entities, self.small_big_letters_dict, len(unique_terms), tweet_date, term_dict, doc_length)
+        document = Document(tweet_id, max_tf, entities_set, small_big, len(unique_terms), tweet_date, term_dict, doc_length)
 
         return document

@@ -2,7 +2,7 @@ import math
 import pickle
 import bisect
 from concurrent.futures.thread import ThreadPoolExecutor
-
+from collections import Counter
 import utils
 from multiprocessing import Pool
 from collections import OrderedDict
@@ -18,8 +18,6 @@ class Indexer:
         # inverted_idx - {term : [df, idf, total_tf]} ???
         # postingDict - {term: [(document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount)]}
 
-        # self.inverted_idx = OrderedDict()
-        # self.posting_dict = OrderedDict()
         self.inverted_idx = {}
         self.posting_dict = {}
         self.config = config
@@ -28,8 +26,10 @@ class Indexer:
         self.posting_files_counter = 1
         self.num_of_terms_in_posting = 0
 
+        self.entities = Counter()
+        self.small_big = {}
 
-    def add_new_doc(self, document):
+    def add_new_doc(self, document, is_last):
         """
         This function perform indexing process for a document object.
         Saved information is captures via two dictionaries ('inverted index' and 'posting')
@@ -37,13 +37,23 @@ class Indexer:
         :return: -
         """
         document_dictionary = document.term_doc_dictionary
+        # entities as is ->  token
+        self.entities.update(document.entities_set)
+
         # Go over each term in the doc
         for term in document_dictionary.keys():
             try:
+                # smaill_big
+                # term = lower case
+                if term in document.small_big_letters_dict:
+                    if term not in self.small_big.keys():
+                        self.small_big[term] = document.small_big_letters_dict[term]
+                    else:
+                        self.small_big[term] = self.small_big[term] and document.small_big_letters_dict[term]
+
                 # Update inverted index and posting
                 if term not in self.inverted_idx.keys():
                     self.inverted_idx[term] = [1, self.posting_files_counter]
-
                 else:
                     self.inverted_idx[term][0] += 1
 
@@ -51,16 +61,18 @@ class Indexer:
                 normalized_tf = tf/document.max_tf  # or float(tf/document.max_tf)
 
                 if term not in self.posting_dict.keys():
-                    self.posting_dict[term] = [(document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount)]
+                    self.posting_dict[term] = [(document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount, document.doc_length)]
                 else:
-                    bisect.insort(self.posting_dict[term], (document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount))
+                    bisect.insort(self.posting_dict[term], (document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount, document.doc_length))
                 self.num_of_terms_in_posting += 1
             except:
-                print('problem with the following key {}'.format(term[0]))
+                print('problem with the following key {}'.format(term))
 
             # saving files with pickle - TODO - give path to save this files
             if self.num_of_terms_in_posting == Indexer.TERM_NUM_IN_POSTING:
                 self.save_posting()
+        if is_last:
+            self.save_posting()
 
 
     def test_before_merge(self):
@@ -116,6 +128,51 @@ class Indexer:
             # iterate through 2 posting dictionaries
             while pointer_pd1 < len(keys_1) and pointer_pd2 < len(keys_2):
                 term_1, term_2 = keys_1[pointer_pd1], keys_2[pointer_pd2]
+
+                # if (term_1 == 'AA' or term_2 == 'AA'):
+                #     print("a")
+                #     print(self.entities['AA'])
+
+                # bad entity
+                if term_1 in self.entities and self.entities[term_1] < 2:
+                    # if self.entities[term_1] < 2:
+                    pointer_pd1 += 1
+                    # DELETE FROM ALL PLACES
+                    if term_1 in self.inverted_idx.keys():
+                        del self.inverted_idx[term_1]
+                        # del posting_dict_1[term_1]
+                    continue
+
+                if term_2 in self.entities and self.entities[term_2] < 2:
+                    # if self.entities[term_2] < 2:
+                    pointer_pd2 += 1
+                    # DELETE FROM ALL PLACES
+                    if term_2 in self.inverted_idx.keys():
+                        del self.inverted_idx[term_2]
+                        # del posting_dict_2[term_2]
+                    continue
+
+                # only big letters
+                if term_1 in self.small_big and not self.small_big[term_1] and term_1 in self.inverted_idx.keys():
+                    old_1 = term_1
+                    term_1 = term_1.upper()
+
+                    self.inverted_idx[term_1] = self.inverted_idx[old_1]
+                    del self.inverted_idx[old_1]
+
+                    posting_dict_1[term_1] = posting_dict_1[old_1]
+                    del self.posting_dict_1[old_1]
+
+                if term_2 in self.small_big and not self.small_big[term_2] and term_2 in self.inverted_idx.keys():
+                    old_2 = term_2
+                    term_2 = term_2.upper()
+
+                    self.inverted_idx[term_2] = self.inverted_idx[old_2]
+                    del self.inverted_idx[term_2]
+
+                    posting_dict_2[term_2] = posting_dict_1[old_2]
+                    del self.posting_dict_2[old_2]
+
                 if term_1 < term_2:
                     merged_posting[term_1] = posting_dict_1[term_1]
                     pointer_pd1 += 1
@@ -255,19 +312,22 @@ class Indexer:
         # Since we start with numproc a power of two, there will always be an
         # even number of sorted sublists to pair up, until there is only one.
         self.all_posting = self.all_posting[0]
-        # test merge!
-        l = []
-        for i, name in enumerate(self.all_posting):
-            print(name)
-            dict = utils.load_obj(str(name))
-            keys = list(dict.keys())
-            l += keys
-        for key in l:
-            if l.count(key) > 1:
-                print('KAKI')
-            else:
-                print(".")
-        print()
+
+        #########################################################################
+        # # test merge!
+        # l = []
+        # for i, name in enumerate(self.all_posting):
+        #     print(name)
+        #     dict = utils.load_obj(str(name))
+        #     keys = list(dict.keys())
+        #     l += keys
+        # for key in l:
+        #     if l.count(key) > 1:
+        #         print('KAKI')
+        #     else:
+        #         print(".")
+        #########################################################################
+
     # Calculate idf for each term in inverted index after finish indexing
     def calculate_idf(self, N):
         for val in self.inverted_idx.values():
