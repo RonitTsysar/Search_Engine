@@ -37,6 +37,8 @@ class Searcher:
         :param query_dict: query
         :return: dictionary of relevant documents.
         """
+        # relevant_docs = {tweet_id : [vec tf-idf for cosine, [vec tf,len_doc for BM25]]}
+        # tweet_tuple = (tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount, len_doc)
 
         relevant_docs = {}
         query_vector = np.zeros(len(query_dict), dtype=float)
@@ -49,14 +51,20 @@ class Searcher:
                 posting_dict = utils.load_obj(str(posting_name))
                 tweets_contain_term = posting_dict[term]
 
-                # tweets_contain_term = posting_dict[term]  #[(document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount)]
+
                 for tweet_tuple in tweets_contain_term:
                     tweet_id = tweet_tuple[0]
+
                     if tweet_id not in relevant_docs.keys():
-                        relevant_docs[tweet_id] = np.zeros(len(query_dict), dtype = float)
+                        doc_len = tweet_tuple[-1]
+                        relevant_docs[tweet_id] = [np.zeros(len(query_dict), dtype = float),[np.zeros(len(query_dict), dtype = float), doc_len]]
+
+                    # TODO - decide if normalized tf or tf
                     tf_tweet = tweet_tuple[1]
+                    # tf_tweet = tweet_tuple[2]
                     idf = self.inverted_index[term][0]
-                    relevant_docs[tweet_id][idx] = tf_tweet * idf
+                    relevant_docs[tweet_id][0][idx] = tf_tweet * idf
+                    relevant_docs[tweet_id][1][0][idx] = tf_tweet
 
                     tf_query = query_dict[term]
                     query_vector[idx] = tf_query * idf
