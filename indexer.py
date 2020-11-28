@@ -11,23 +11,32 @@ from collections import OrderedDict
 class Indexer:
 
     TERM_NUM_IN_POSTING = 500000
+    DOC_NUM_IN_POSTING = 100000
 
     def __init__(self, config):
         # STRUCTURE OF INDEX
+
         # inverted_idx - {term : [df, posting_files_counter]} ----------> # inverted_idx - {term : [idf, posting_files_counter]}
-        # inverted_idx - {term : [df, idf, total_tf]} ???
-        # postingDict - {term: [(document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount)]}
+        # posting_dict - {term: [(document.tweet_id, normalized_tf, tf)]}
+        # tweets_inverted - {tweet_id : tweets_posting_counter}
+        # tweets_posting - {tweet_id : [document.unique_terms, document.unique_terms_amount, document.max_tf, document.doc_length]}
 
         self.inverted_idx = {}
         self.posting_dict = {}
-        self.config = config
-
         self.all_posting = []
         self.posting_files_counter = 1
         self.num_of_terms_in_posting = 0
 
         self.entities = Counter()
         self.small_big = {}
+        self.config = config
+
+        # for Local Method
+        self.docs_inverted = {}
+        self.docs_posting = {}
+        self.docs_counter = 1
+        self.num_of_docs_in_posting = 0
+
 
     def add_new_doc(self, document, is_last):
         """
@@ -40,10 +49,18 @@ class Indexer:
         # entities as is ->  token
         self.entities.update(document.entities_set)
 
+        # preprocessing for Local Method
+
+        self.docs_posting[document.tweet_id] = [document.unique_terms, document.unique_terms_amount, document.max_tf, document.doc_length]
+        self.docs_inverted[document.tweet_id] = self.docs_counter
+        self.num_of_docs_in_posting += 1
+        if self.num_of_docs_in_posting == Indexer.DOC_NUM_IN_POSTING:
+            self.save_doc()
+
         # Go over each term in the doc
         for term in document_dictionary.keys():
             try:
-                # smaill_big
+                # small_big
                 # term = lower case
                 if term in document.small_big_letters_dict:
                     if term not in self.small_big.keys():
@@ -58,12 +75,12 @@ class Indexer:
                     self.inverted_idx[term][0] += 1
 
                 tf = document_dictionary[term]
-                normalized_tf = tf/document.max_tf  # or float(tf/document.max_tf)
+                normalized_tf = tf/document.max_tf
 
                 if term not in self.posting_dict.keys():
-                    self.posting_dict[term] = [(document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount, document.doc_length)]
+                    self.posting_dict[term] = [(document.tweet_id, normalized_tf, tf)]
                 else:
-                    bisect.insort(self.posting_dict[term], (document.tweet_id, normalized_tf, tf, document.max_tf, document.unique_terms_amount, document.doc_length))
+                    bisect.insort(self.posting_dict[term], (document.tweet_id, normalized_tf, tf))
                 self.num_of_terms_in_posting += 1
             except:
                 print('problem with the following key {}'.format(term))
@@ -73,6 +90,7 @@ class Indexer:
                 self.save_posting()
         if is_last:
             self.save_posting()
+            self.save_doc()
 
 
     def test_before_merge(self):
@@ -96,6 +114,13 @@ class Indexer:
             self.posting_dict = {}
             self.all_posting.append([self.posting_files_counter])
             self.posting_files_counter += 1
+
+    def save_doc(self):
+        if len(self.docs_posting) > 0:
+            utils.save_obj(self.docs_posting, 'doc' + str(self.docs_counter))
+            self.docs_counter += 1
+            self.docs_posting = {}
+
 
     def save_in_merge(self, merged_posting, merged_list):
         utils.save_obj(merged_posting, str(self.posting_files_counter))
@@ -128,10 +153,6 @@ class Indexer:
             # iterate through 2 posting dictionaries
             while pointer_pd1 < len(keys_1) and pointer_pd2 < len(keys_2):
                 term_1, term_2 = keys_1[pointer_pd1], keys_2[pointer_pd2]
-
-                # if (term_1 == 'AA' or term_2 == 'AA'):
-                #     print("a")
-                #     print(self.entities['AA'])
 
                 # bad entity
                 if term_1 in self.entities and self.entities[term_1] < 2:
@@ -217,14 +238,7 @@ class Indexer:
                     posting_dict_1 = utils.load_obj(str(left[idx_left]))
                     pointer_pd1 = 0
                     keys_1 = list(posting_dict_1.keys())
-                # else:
-                #     if idx_right < len(right):
-                #         # copying all leftovers from unfinished posting dict
-                #         while pointer_pd2 < len(keys_2):
-                #             if len(merged_posting) == Indexer.TERM_NUM_IN_POSTING:
-                #                 merged_posting = self.save_in_merge(merged_posting, merged_list)
-                #             merged_posting[keys_2[pointer_pd2]] = posting_dict_2[keys_2[pointer_pd2]]
-                #             pointer_pd2 += 1
+
 
             if pointer_pd2 == len(keys_2):
                 idx_right += 1
@@ -233,16 +247,7 @@ class Indexer:
                     posting_dict_2 = utils.load_obj(str(right[idx_right]))
                     pointer_pd2 = 0
                     keys_2 = list(posting_dict_2.keys())
-                # else:
-                #     if idx_left < len(left):
-                #         # copying all leftovers from unfinished posting dict
-                #         while pointer_pd1 < len(keys_1):
-                #             if len(merged_posting) == Indexer.TERM_NUM_IN_POSTING:
-                #                 merged_posting = self.save_in_merge(merged_posting, merged_list)
-                #             merged_posting[keys_1[pointer_pd1]] = posting_dict_1[keys_1[pointer_pd1]]
-                #             pointer_pd1 += 1
 
-        # need to check if finish last dict in left instead of copying it again
 
         # left list is not finished
         while idx_left < len(left):
@@ -269,11 +274,6 @@ class Indexer:
             if idx_right < len(right):
                 posting_dict_2 = utils.load_obj(str(right[idx_right]))
                 pointer_pd2 = 0
-
-        # if idx_left == len(left):
-        #     merged_list.extend(right[idx_right:])
-        # if idx_right == len(right):
-        #     merged_list.extend(left[idx_left:])
 
         merged_posting = self.save_in_merge(merged_posting, merged_list)
 
@@ -332,5 +332,6 @@ class Indexer:
     def calculate_idf(self, N):
         for val in self.inverted_idx.values():
             val[0] = math.log2(N/val[0])
+
 
 

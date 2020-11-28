@@ -23,7 +23,7 @@ class Parse:
         self.stemmer = Stemmer()
         self.stop_words = stopwords.words('english')
         self.stop_words.extend([r' ', r'', r"", r"''", r'""', r'"', r"“", r"”", r"’", r"‘", r"``", r"'", r"`"])
-        self.stop_words.extend(["rt", r'!', r'?', r',', r':', r';', r'(', r')', r'...', r'[', ']', r'{', '}' "'&'", '$', '.', r'\'s', '\'s', '\'d', r'\'d'])
+        self.stop_words.extend(["rt", r'!', r'?', r',', r':', r';', r'(', r')', r'...', r'[', ']', r'{', '}' "'&'", '$', '.', r'\'s', '\'s', '\'d', r'\'d', r'n\'t'])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
 
         self.url_pattern = re.compile('http\S+')
@@ -344,7 +344,7 @@ class Parse:
 
         # save only tf for each term in tweet
         for index, term in enumerate(tokenized_text):
-            if term not in term_dict.keys():
+            if term not in term_dict:
                 term_dict[term] = 1
 
             else:
@@ -353,6 +353,6 @@ class Parse:
                     max_tf = term_dict[term]
 
         # TODO - check if we need to save tokenized_text
-        document = Document(tweet_id, max_tf, entities_set, small_big, len(unique_terms), tweet_date, term_dict, doc_length)
+        document = Document(tweet_id, max_tf, entities_set, small_big, unique_terms, tweet_date, term_dict, doc_length)
 
         return document

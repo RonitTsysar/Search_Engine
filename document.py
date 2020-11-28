@@ -1,6 +1,6 @@
 class Document:
 
-    def __init__(self, tweet_id, max_tf, entities_set, small_big_letters_dict, unique_terms_amount, tweet_date=None, term_doc_dictionary=None, doc_length=0):
+    def __init__(self, tweet_id, max_tf, entities_set, small_big_letters_dict, unique_terms, tweet_date=None, term_doc_dictionary=None, doc_length=0):
         """
         :param tweet_id: tweet id
         :param tweet_date: tweet date
@@ -21,4 +21,5 @@ class Document:
         self.max_tf = max_tf
         self.entities_set = entities_set
         self.small_big_letters_dict = small_big_letters_dict
-        self.unique_terms_amount = unique_terms_amount
+        self.unique_terms = unique_terms
+        self.unique_terms_amount = len(unique_terms)
