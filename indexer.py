@@ -38,7 +38,7 @@ class Indexer:
         self.num_of_docs_in_posting = 0
 
 
-    def add_new_doc(self, document, is_last):
+    def add_new_doc(self, document):
         """
         This function perform indexing process for a document object.
         Saved information is captures via two dictionaries ('inverted index' and 'posting')
@@ -88,10 +88,13 @@ class Indexer:
             # saving files with pickle - TODO - give path to save this files
             if self.num_of_terms_in_posting == Indexer.TERM_NUM_IN_POSTING:
                 self.save_posting()
-        if is_last:
-            self.save_posting()
-            self.save_doc()
+        # if is_last:
+        #     self.save_posting()
+        #     self.save_doc()
 
+    def check_last(self):
+        self.save_posting()
+        self.save_doc()
 
     def test_before_merge(self):
         l = []
@@ -321,6 +324,7 @@ class Indexer:
         #     dict = utils.load_obj(str(name))
         #     keys = list(dict.keys())
         #     l += keys
+        #
         # for key in l:
         #     if l.count(key) > 1:
         #         print('KAKI')
