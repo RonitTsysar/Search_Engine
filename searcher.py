@@ -56,7 +56,6 @@ class Searcher:
                 posting_dict = utils.load_obj(str(posting_name))
                 tweets_contain_term = posting_dict[term]
 
-
                 for tweet_tuple in tweets_contain_term:
                     tweet_id = tweet_tuple[0]
                     if tweet_id not in relevant_docs:

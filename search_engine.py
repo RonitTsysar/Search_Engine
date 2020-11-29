@@ -24,29 +24,22 @@ def run_engine(with_stem):
     total_len_docs = 0
     avg_doc_len = 0
 
-    for file in r.read_corpus():
+    is_last = False
+    for i, file in enumerate(r.read_corpus()):
         # Iterate over every document in the file
         number_of_files += 1
-        is_last = False
+        # is_last = False
         for idx, document in tqdm(enumerate(file)):
             # parse the document
             parsed_document = p.parse_doc(document)
             number_of_documents += 1
             total_len_docs += parsed_document.doc_length
-            # index the document data
-            if idx == len(file)-1:
-                is_last = True
-            indexer.add_new_doc(parsed_document, is_last)
-        # check if last posting not empty before saving
-        # TODO - delete after checks
-        # indexer.test_before_merge()
-        start = time.time()
-        # TODO - fix parallel!!!
-        indexer.merge_sort_parallel(3)
-        print(time.time() - start)
-        # TODO - check if need to move after outer loop
-        indexer.calculate_idf(number_of_documents)
-        avg_doc_len = total_len_docs/number_of_documents
+            indexer.add_new_doc(parsed_document)
+
+    indexer.check_last()
+    indexer.merge_sort_parallel(3)
+    indexer.calculate_idf(number_of_documents)
+    avg_doc_len = total_len_docs/number_of_documents
     print('Finished parsing and indexing. Starting to export files')
 
     utils.save_obj(indexer.inverted_idx, "inverted_idx")
