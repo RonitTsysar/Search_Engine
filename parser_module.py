@@ -26,6 +26,10 @@ class Parse:
         self.stop_words.extend(["rt", r'!', r'?', r',', r':', r';', r'(', r')', r'...', r'[', ']', r'{', '}' "'&'", '$', '.', r'\'s', '\'s', '\'d', r'\'d', r'n\'t'])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
 
+        # for avg
+        self.total_len_docs = 0
+        self.number_of_documents = 0
+
         self.url_pattern = re.compile('http\S+')
         self.url_www_pattern = re.compile("[/://?=]")
         # TODO - fix numbers pattern
@@ -352,6 +356,8 @@ class Parse:
                 if term_dict[term] > max_tf:
                     max_tf = term_dict[term]
 
+        self.total_len_docs += doc_length
+        self.number_of_documents += 1
         # TODO - check if we need to save tokenized_text
         document = Document(tweet_id, max_tf, entities_set, small_big, unique_terms, tweet_date, term_dict, doc_length)
 

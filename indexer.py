@@ -11,7 +11,7 @@ from collections import OrderedDict
 class Indexer:
 
     TERM_NUM_IN_POSTING = 500000
-    DOC_NUM_IN_POSTING = 100000
+    DOC_NUM_IN_POSTING = 500000
 
     def __init__(self, config):
         # STRUCTURE OF INDEX
@@ -314,7 +314,8 @@ class Indexer:
             # test = self.merge_wrap(list_of_pairs)
         # Since we start with numproc a power of two, there will always be an
         # even number of sorted sublists to pair up, until there is only one.
-        self.all_posting = self.all_posting[0]
+        if len(self.all_posting) > 0:
+            self.all_posting = self.all_posting[0]
 
         #########################################################################
         # # test merge!
