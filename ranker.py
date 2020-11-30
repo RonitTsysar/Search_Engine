@@ -32,7 +32,7 @@ class Ranker:
                 below = tf + k*(1 - b + b * (doc_len/avg_doc_len))
                 total_BM25 += upper/ below
 
-            relevant_docs[tweet] = 0.8*cosine_sim + 0.2*total_BM25
+            relevant_docs[tweet] = cosine_sim
         return sorted(relevant_docs.items(), key=lambda item: item[1], reverse=True)
 
     @staticmethod
