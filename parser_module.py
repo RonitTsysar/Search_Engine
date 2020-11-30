@@ -23,7 +23,8 @@ class Parse:
         self.stemmer = Stemmer()
         self.stop_words = stopwords.words('english')
         self.stop_words.extend([r' ', r'', r"", r"''", r'""', r'"', r"“", r"”", r"’", r"‘", r"``", r"'", r"`"])
-        self.stop_words.extend(["rt", r'!', r'?', r',', r':', r';', r'(', r')', r'...', r'[', ']', r'{', '}' "'&'", '$', '.', r'\'s', '\'s', '\'d', r'\'d', r'n\'t'])
+        self.stop_words.extend(['rt', r'!', r'?', r',', r':', r';', r'(', r')', r'...', r'[', ']', r'{', '}' "'&'", '$', '.', r'\'s', '\'s', '\'d', r'\'d', r'n\'t'])
+        self.stop_words.extend(['1️⃣.1️⃣2️⃣'])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
 
         # for avg
@@ -34,6 +35,7 @@ class Parse:
         self.url_www_pattern = re.compile("[/://?=]")
         # TODO - fix numbers pattern
         self.numbers_pattern = re.compile(('^\d+([/|.|,]?\d+)*'))
+        self.dates_pattern = re.compile(r'^(?:(?:31(\/|-|\.)(?:0?[13578]|1[02]))\1|(?:(?:29|30)(\/|-|\.)(?:0?[13-9]|1[0-2])\2))(?:(?:1[6-9]|[2-9]\d)?\d{2})$|^(?:29(\/|-|\.)0?2\3(?:(?:(?:1[6-9]|[2-9]\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00))))$|^(?:0?[1-9]|1\d|2[0-8])(\/|-|\.)(?:(?:0?[1-9])|(?:1[0-2]))\4(?:(?:1[6-9]|[2-9]\d)?\d{2})$')
         # TODO - fix emoji to include all emojis
         self.emojis_pattern = re.compile(pattern="["
                                                 u"\U0001F600-\U0001F64F"  # emoticons
@@ -165,10 +167,6 @@ class Parse:
         small_big_dict = {}
 
         for i, token in enumerate(text_tokens):
-            # token = text_tokens[i]
-
-            if self.with_stem:
-                token = self.stemmer.stem_term(token)
 
             if token == ' ':
                 continue
@@ -199,6 +197,11 @@ class Parse:
                     entity = ''
                     entity_counter = 0
                     continue
+
+            # DATES
+            date_match = self.dates_pattern.match(token)
+            if date_match:
+                tokenized_text.append(token)
 
             # NUMBERS
             # number_match = self.numbers_pattern_1.match(token) or self.numbers_pattern_2.match(token)
@@ -238,7 +241,7 @@ class Parse:
                         continue
 
             # ENTITY AND SMALL_BIG
-            if token.isalpha() and token.lower() not in self.stop_words:
+            if token.isalpha() and token.lower() not in self.stop_words_dict:
                 if token[0].isupper():
                     entity += token + ' '
                     entity_counter += 1
@@ -258,25 +261,23 @@ class Parse:
                         if entity not in small_big_dict.keys():
                             small_big_dict[token.lower()] = False
 
-                    # now we have small leter token
+                    # now we have small letter token
                     if token not in small_big_dict.keys() or not small_big_dict[token]:
                         small_big_dict[token.lower()] = True
 
+            if '-' in token:
+                tokenized_text.append(token)
+                split_tok = [t.lower() for t in token.split('-')]
+                tokenized_text += split_tok
+                continue
 
-            #TODO check if lower is ok here
             # append all regular words
             suffix = "…";
-            # token = token.lower()
-            if token not in self.stop_words_dict and not token.endswith(suffix) and len(token) > 1:
-                tokenized_text.append(token.lower())
-
-        # print(f'tokenized_text --> {tokenized_text}')
-        for stop in self.stop_words_dict:
-            if stop in tokenized_text:
-                tokenized_text.remove(stop)
-
-        if token == "AAAAAAAAAAAAAAND":
-            print("RR")
+            if self.with_stem:
+                token = self.stemmer.stem_term(token)
+            token = token.lower()
+            if token not in self.stop_words_dict and not token.endswith(suffix) and token != suffix and len(token) > 1:
+                tokenized_text.append(token)
 
         return tokenized_text, entities_set, small_big_dict
 
@@ -335,7 +336,6 @@ class Parse:
 
         all_texts = self.get_texts([full_text, quote_text, retweet_quoted_text])
         # remove urls from text, only if exist in url
-        # TODO - think what else to remove
         if len(urls) > 0:
             all_texts = self.url_pattern.sub('', all_texts)
 
@@ -345,7 +345,6 @@ class Parse:
         doc_length = len(tokenized_text)  # after text operations.
 
         max_tf = 1
-
         # save only tf for each term in tweet
         for index, term in enumerate(tokenized_text):
             if term not in term_dict:
