@@ -65,7 +65,7 @@ def search_and_rank_query(query, inverted_index, inverted_docs, k, avg_doc_len, 
 
 def main(with_stem):
 
-    run_engine(with_stem)
+    # run_engine(with_stem)
 
     query = input("Please enter a query: ")
     k = int(input("Please enter number of docs to retrieve: "))
@@ -75,7 +75,7 @@ def main(with_stem):
 
     # TODO - check if it's ok to change parameters and
     # TODO - Decide k=1000 round_1 we? need to match for the requested final k (instructions 2000 top)
-    round_1 = search_and_rank_query(query, inverted_index, inverted_docs, 100, avg_doc_len, with_stem)
+    round_1 = search_and_rank_query(query, inverted_index, inverted_docs, 10, avg_doc_len, with_stem)
     local_method_ranker = local_method(inverted_docs, inverted_index)
     expanded_query = local_method_ranker.expand_query(query, round_1)
     for doc_tuple in search_and_rank_query(expanded_query, inverted_index, inverted_docs, k, avg_doc_len, with_stem):

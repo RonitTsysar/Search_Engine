@@ -9,7 +9,7 @@ from collections import OrderedDict
 class Indexer:
 
     TERM_NUM_IN_POSTING = 500000
-    DOC_NUM_IN_POSTING = 100000
+    DOC_NUM_IN_POSTING = 500000
 
     def __init__(self, config):
         # STRUCTURE OF INDEX
@@ -31,7 +31,7 @@ class Indexer:
 
         # for Local Method
         self.docs_inverted = {}
-        self.docs_list_for_inverted = []
+        # self.docs_list_for_inverted = []
         self.docs_posting = {}
         self.docs_counter = 1
         self.num_of_docs_in_posting = 0
@@ -51,9 +51,9 @@ class Indexer:
         # preprocessing for Local Method
 
         self.docs_posting[document.tweet_id] = [document.unique_terms, document.unique_terms_amount, document.max_tf, document.doc_length]
-        # self.docs_inverted[document.tweet_id] = self.docs_counter
+        self.docs_inverted[document.tweet_id] = self.docs_counter
 
-        self.docs_list_for_inverted.append(document.tweet_id)
+        # self.docs_list_for_inverted.append(document.tweet_id)
         self.num_of_docs_in_posting += 1
 
         if self.num_of_docs_in_posting == Indexer.DOC_NUM_IN_POSTING:
@@ -119,9 +119,9 @@ class Indexer:
 
     def save_doc(self):
         if len(self.docs_posting) > 0:
-            self.docs_inverted[self.docs_counter] = self.docs_list_for_inverted
+            # self.docs_inverted[self.docs_counter] = self.docs_list_for_inverted
             utils.save_obj(self.docs_posting, 'doc' + str(self.docs_counter))
-            self.docs_list_for_inverted = []
+            # self.docs_list_for_inverted = []
             self.docs_counter += 1
             self.docs_posting = {}
 
