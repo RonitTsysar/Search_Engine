@@ -37,7 +37,7 @@ class Searcher:
 
         return query_dict
 
-    def relevant_docs_from_posting(self, query_dict):
+    '''def relevant_docs_from_posting(self, query_dict):
 
         relevant_docs = {}
         query_vector = np.zeros(len(query_dict), dtype=float)
@@ -81,9 +81,9 @@ class Searcher:
             except:
                 print('term {} not found in posting'.format(term))
 
-        return relevant_docs, query_vector
+        return relevant_docs, query_vector'''
 
-    '''def relevant_docs_from_posting(self, query_dict):
+    def relevant_docs_from_posting(self, query_dict):
         """
         This function loads the posting list and count the amount of relevant documents per term.
         :param query_dict: query
@@ -127,6 +127,4 @@ class Searcher:
             except:
                 print('term {} not found in posting'.format(term))
 
-        return relevant_docs, query_vector'''
-
-
+        return relevant_docs, query_vector
