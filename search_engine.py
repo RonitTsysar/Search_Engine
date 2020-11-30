@@ -28,13 +28,15 @@ def run_engine(with_stem):
             # parse the document
             parsed_document = parser.parse_doc(document)
             indexer.add_new_doc(parsed_document)
-
+    start = time.time()
     indexer.check_last()
     indexer.merge_sort_parallel(3)
+    print(f' time after merge sort : {time.time() - start}')
     # TODO - to think about it
+    start = time.time()
     indexer.calculate_idf(parser.number_of_documents)
+    print(f' time after calculate_idf : {time.time() - start}')
     print('Finished parsing and indexing. Starting to export files')
-
     # TODO - check how to save
     avg_doc_len = parser.total_len_docs / parser.number_of_documents
     utils.save_obj(avg_doc_len, "data")
@@ -75,7 +77,7 @@ def main(with_stem):
 
     # TODO - check if it's ok to change parameters and
     # TODO - Decide k=1000 round_1 we? need to match for the requested final k (instructions 2000 top)
-    round_1 = search_and_rank_query(query, inverted_index, inverted_docs, 100, avg_doc_len, with_stem)
+    round_1 = search_and_rank_query(query, inverted_index, inverted_docs, 10, avg_doc_len, with_stem)
     local_method_ranker = local_method(inverted_docs, inverted_index)
     expanded_query = local_method_ranker.expand_query(query, round_1)
     for doc_tuple in search_and_rank_query(expanded_query, inverted_index, inverted_docs, k, avg_doc_len, with_stem):

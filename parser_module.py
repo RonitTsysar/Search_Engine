@@ -98,7 +98,7 @@ class Parse:
         try:
             token = float(token)
         except:
-            print('token --------------------> ' + token)
+            # print('token --------------------> ' + token)
             # from this type - 10.07.2020
             all_tokens_list.append(token)
             return
