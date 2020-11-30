@@ -65,7 +65,7 @@ def search_and_rank_query(query, inverted_index, inverted_docs, k, avg_doc_len, 
 
 def main(with_stem):
 
-    # run_engine(with_stem)
+    run_engine(with_stem)
 
     query = input("Please enter a query: ")
     k = int(input("Please enter number of docs to retrieve: "))
