@@ -54,7 +54,7 @@ class Searcher:
                 tweets_contain_term__ids = [i[0] for i in posting_dict[term]]
 
                 for doc_name in self.inverted_docs.keys():
-                    if len(tweets_contain_term__ids) < 0:
+                    if len(tweets_contain_term__ids) == 0:
                         break
                     doc_loaded = utils.load_obj('doc' + str(doc_name))
                     doc_ids_in_loaded_file = doc_loaded.keys()
@@ -82,6 +82,7 @@ class Searcher:
                 print('term {} not found in posting'.format(term))
 
         return relevant_docs, query_vector'''
+
 
     def relevant_docs_from_posting(self, query_dict):
         """
@@ -128,3 +129,4 @@ class Searcher:
                 print('term {} not found in posting'.format(term))
 
         return relevant_docs, query_vector
+

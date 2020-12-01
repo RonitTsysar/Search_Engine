@@ -19,16 +19,26 @@ class local_method:
         self.relevant_docs_per_term = {}
 
     def expand_query(self, query, round_1):
-        all_unique_terms = set()
-        for doc_tuple in round_1:
-            tweet_id = doc_tuple[0]
-            doc_posting_name = self.inverted_docs[tweet_id]
-            if doc_posting_name != self.loaded_doc_num:
-                self.loaded_doc = utils.load_obj('doc' + str(doc_posting_name))
-                self.loaded_doc_num = doc_posting_name
 
-            unique_terms = self.loaded_doc[tweet_id][0]
-            all_unique_terms.update(unique_terms)
+        all_unique_terms = set()
+        relevent_tweets_id = [i[0] for i in round_1]
+
+        for doc_name in self.inverted_docs.keys():
+            inersection_temp = []
+            if len(relevent_tweets_id) == 0:
+                break
+            self.loaded_doc = utils.load_obj('doc' + str(doc_name))
+            doc_ids_in_loaded_file = self.loaded_doc.keys()
+            # all tweets in loadded doc
+            inersection_temp = list(set(list(doc_ids_in_loaded_file)) & set(relevent_tweets_id))
+
+            # remove inersection tweets from tweets_contain_term
+            temp = [doc for doc in relevent_tweets_id if doc not in inersection_temp]
+            relevent_tweets_id = temp
+
+            for tweet_id in inersection_temp:
+                unique_terms = self.loaded_doc[tweet_id][0]
+                all_unique_terms.update(unique_terms)
 
         n = len(all_unique_terms)
 
@@ -96,6 +106,3 @@ class local_method:
             if doc_id in wj_tf_dict:
                 cij += wi_tf_dict[doc_id] * wj_tf_dict[doc_id]
         return cij
-
-
-    # doc_matrix = np.fromfunction(lambda i, j: i * j, (5, 5))

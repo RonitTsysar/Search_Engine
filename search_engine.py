@@ -28,13 +28,15 @@ def run_engine(with_stem):
             # parse the document
             parsed_document = parser.parse_doc(document)
             indexer.add_new_doc(parsed_document)
-
+    start = time.time()
     indexer.check_last()
     indexer.merge_sort_parallel(3)
+    print(f' time after merge sort : {time.time() - start}')
     # TODO - to think about it
+    start = time.time()
     indexer.calculate_idf(parser.number_of_documents)
+    print(f' time after calculate_idf : {time.time() - start}')
     print('Finished parsing and indexing. Starting to export files')
-
     # TODO - check how to save
     avg_doc_len = parser.total_len_docs / parser.number_of_documents
     utils.save_obj(avg_doc_len, "data")
