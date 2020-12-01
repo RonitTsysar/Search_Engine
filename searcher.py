@@ -37,7 +37,7 @@ class Searcher:
 
         return query_dict
 
-    '''def relevant_docs_from_posting(self, query_dict):
+    def relevant_docs_from_posting(self, query_dict):
 
         relevant_docs = {}
         query_vector = np.zeros(len(query_dict), dtype=float)
@@ -81,52 +81,7 @@ class Searcher:
             except:
                 print('term {} not found in posting'.format(term))
 
-        return relevant_docs, query_vector'''
-
-
-    def relevant_docs_from_posting(self, query_dict):
-        """
-        This function loads the posting list and count the amount of relevant documents per term.
-        :param query_dict: query
-        :return: dictionary of relevant documents.
-        """
-        # relevant_docs = {tweet_id : [vec tf-idf for cosine, [vec tf,len_doc for BM25]]}
-        # inverted_idx - {term : [df, posting_files_counter]} ----------> # inverted_idx - {term : [idf, posting_files_counter]}
-        # posting_dict - {term: [(document.tweet_id, normalized_tf, tf)]}
-        # tweets_inverted - {tweet_id : tweets_posting_counter}
-        # tweets_posting - {tweet_id : [document.unique_terms, document.unique_terms_amount, document.max_tf, document.doc_length]}
-
-        relevant_docs = {}
-        query_vector = np.zeros(len(query_dict), dtype=float)
-
-        for idx, term in tqdm(enumerate(query_dict)):
-            try:
-                posting_name = self.inverted_index[term][1]
-                posting_dict = utils.load_obj(str(posting_name))
-                tweets_contain_term = posting_dict[term]
-
-                for tweet_tuple in tweets_contain_term:
-                    tweet_id = tweet_tuple[0]
-                    if tweet_id not in relevant_docs:
-                        doc_posting_name = self.inverted_docs[tweet_id]
-
-                        if self.loaded_doc_name != doc_posting_name:
-                            self.loaded_doc = utils.load_obj('doc' + str(doc_posting_name))
-                            self.loaded_doc_name = doc_posting_name
-
-                        doc_len = self.loaded_doc[tweet_id][-1]
-                        relevant_docs[tweet_id] = [np.zeros(len(query_dict), dtype = float), [np.zeros(len(query_dict), dtype = float), doc_len]]
-
-                    # TODO - decide if normalized tf or tf
-                    tf_tweet = tweet_tuple[1]
-                    idf = self.inverted_index[term][0]
-                    relevant_docs[tweet_id][0][idx] = tf_tweet * idf
-                    relevant_docs[tweet_id][1][0][idx] = tf_tweet
-
-                    tf_query = query_dict[term]
-                    query_vector[idx] = tf_query * idf
-            except:
-                print('term {} not found in posting'.format(term))
-
         return relevant_docs, query_vector
+
+
 
