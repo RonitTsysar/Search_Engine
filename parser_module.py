@@ -16,13 +16,13 @@ class Parse:
                   'billion': 'B', 'billions': 'B',
                   'trillion': 'TR', 'trillions': 'TR'}
     SIGNS = {'$': '$', 'usd': '$'}
-    QUANTITIES_LIST = ['K', 'M', 'B', 'TR']
+    QUANTITIES_LIST = ['K', 'M', 'B', 'TR', 'TRX', 'TRXX']
 
     def __init__(self, config):
         self.with_stem = config.get_toStem()
         self.stemmer = Stemmer()
         self.stop_words = stopwords.words('english')
-        self.stop_words.extend([r' ', r'', r"", r"''", r'""', r'"', r"“", r"”", r"’", r"‘", r"``", r"'", r"`"])
+        self.stop_words.extend([r' ', r'', r"", r"''", r'""', r'"', r"“", r"”", r"’", r"‘", r"``", r"'", r"`", '"'])
         self.stop_words.extend(['rt', r'!', r'?', r',', r':', r';', r'(', r')', r'...', r'[', ']', r'{', '}' "'&'", '$', '.', r'\'s', '\'s', '\'d', r'\'d', r'n\'t'])
         self.stop_words.extend(['1️⃣.1️⃣2️⃣'])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
@@ -98,7 +98,6 @@ class Parse:
         try:
             token = float(token)
         except:
-            # print('token --------------------> ' + token)
             # from this type - 10.07.2020
             all_tokens_list.append(token)
             return
@@ -126,10 +125,22 @@ class Parse:
                         return
                 # if we have after and token > 1000
                 num, count = helper(token)
-                i = Parse.QUANTITIES_LIST.index(Parse.QUANTITIES[after_token])
-                after_token = Parse.QUANTITIES_LIST[i + count]
-                all_tokens_list.append(str(num) + after_token)
-                return
+                i = Parse.QUANTITIES_LIST.index(Parse.QUANTITIES[after_token]) + 1
+
+                count = count+i
+                if count > 2:
+                    count = count - 2
+                    while (count > 0):
+                        num = float(num) * 1000
+                        count -= 1
+                    if num.is_integer():
+                        num = int(num)
+                    all_tokens_list.append(str(num) + 'B')
+                    return
+                else:
+                    after_token = Parse.QUANTITIES_LIST[count]
+                    all_tokens_list.append(str(num) + after_token)
+                    return
 
             if after_token == 'percent' or after_token == 'percentage' or after_token == '%':
                 is_pers = True
@@ -139,8 +150,18 @@ class Parse:
         else:
             num, count = helper(token)
             try:
-                after = Parse.QUANTITIES_LIST[count]
-                final_t = str(num) + after
+                # more then B
+                if count > 2:
+                    count = count - 2
+                    while (count > 0):
+                        num = float(num) * 1000
+                        count -= 1
+                    if num.is_integer():
+                        num = int(num)
+                    final_t = str(num) + 'B'
+                else:
+                    after = Parse.QUANTITIES_LIST[count]
+                    final_t = str(num) + after
             except:
                 print("prblem in parse numbers: " + token)
 
@@ -208,7 +229,7 @@ class Parse:
             number_match = self.numbers_pattern.match(token)
             if number_match != None:
                 # Numbers over TR
-                if len(token) > 12:
+                if len(token) > 18:
                     tokenized_text.append(token)
 
                     entity = ''
