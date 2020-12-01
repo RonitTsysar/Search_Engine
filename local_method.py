@@ -3,16 +3,18 @@ from collections import defaultdict
 
 class local_method:
 
-    def __init__(self, inverted_docs, inverted_index):
+    def __init__(self, config, inverted_docs, inverted_index):
         """
         :param inverted_index: dictionary of inverted index
         """
+        self.config = config
         self.inverted_docs = inverted_docs
         self.inverted_index = inverted_index
         self.tf_vector_per_doc = {}
 
         self.loaded_doc = None
         self.loaded_doc_num = None
+        self.loaded_posting_name = None
 
         self.correlation_matrix = []
        # {wi : {doc1:tf1, doc3:tf3},  wj: {doc2:tf2, doc3:tf3}}
@@ -27,7 +29,7 @@ class local_method:
             inersection_temp = []
             if len(relevent_tweets_id) == 0:
                 break
-            self.loaded_doc = utils.load_obj('doc' + str(doc_name))
+            self.loaded_doc = utils.load_obj(self.config.get_savedFileMainFolder() + '\\doc' + str(doc_name))
             doc_ids_in_loaded_file = self.loaded_doc.keys()
             # all tweets in loadded doc
             inersection_temp = list(set(list(doc_ids_in_loaded_file)) & set(relevent_tweets_id))
@@ -50,7 +52,11 @@ class local_method:
                     posting_name = self.inverted_index[term.lower()][1]
                 except:
                     continue
-            posting_dict = utils.load_obj(str(posting_name))
+
+            if self.loaded_posting_name is None or self.loaded_posting_name != posting_name:
+                posting_dict = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(posting_name))
+                self.loaded_posting_name = posting_name
+
             tweets_contain_term = posting_dict[term]
 
             # from list to dict, convert list of tuple to dict

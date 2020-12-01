@@ -17,7 +17,7 @@ class Indexer:
         # inverted_idx - {term : [df, posting_files_counter]} ----------> # inverted_idx - {term : [idf, posting_files_counter]}
         # posting_dict - {term: [(document.tweet_id, normalized_tf, tf)]}
         # tweets_inverted - {tweet_id : tweets_posting_counter}
-        # tweets_posting - {tweet_id : [document.unique_terms, document.unique_terms_amount, document.max_tf, document.doc_length]}
+        # tweets_posting - {tweet_id : [document.unique_terms, document.tweet_date_obj, document.max_tf, document.doc_length]}
 
         self.inverted_idx = {}
         self.posting_dict = {}
@@ -50,7 +50,7 @@ class Indexer:
 
         # preprocessing for Local Method
 
-        self.docs_posting[document.tweet_id] = [document.unique_terms, document.unique_terms_amount, document.max_tf, document.doc_length]
+        self.docs_posting[document.tweet_id] = [document.unique_terms, document.tweet_date_obj, document.max_tf, document.doc_length]
         # self.docs_inverted[document.tweet_id] = self.docs_counter
 
         self.docs_list_for_inverted.append(document.tweet_id)
@@ -85,8 +85,7 @@ class Indexer:
                     bisect.insort(self.posting_dict[term], (document.tweet_id, normalized_tf, tf))
                 self.num_of_terms_in_posting += 1
             except:
-                print('problem with the following key {}'.format(term))
-
+                pass
             # saving files with pickle - TODO - give path to save this files
             if self.num_of_terms_in_posting == Indexer.TERM_NUM_IN_POSTING:
                 self.save_posting()
@@ -99,18 +98,16 @@ class Indexer:
         l = []
         for i, name in enumerate(self.all_posting):
             name = name[0]
-            print(name)
-            dict = utils.load_obj(str(name))
+            dict = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(name))
             keys = list(dict.keys())
             l += keys
         set_keys = set(l)
-        print()
 
     def save_posting(self):
         if len(self.posting_dict) > 0:
             # sort keys(terms)
             self.posting_dict = {key: self.posting_dict[key] for key in sorted(self.posting_dict)}
-            utils.save_obj(self.posting_dict, str(self.posting_files_counter))
+            utils.save_obj(self.posting_dict, self.config.get_savedFileMainFolder() + "\\" + str(self.posting_files_counter))
             # clean up
             self.num_of_terms_in_posting = 0
             self.posting_dict = {}
@@ -120,7 +117,7 @@ class Indexer:
     def save_doc(self):
         if len(self.docs_posting) > 0:
             self.docs_inverted[self.docs_counter] = self.docs_list_for_inverted
-            utils.save_obj(self.docs_posting, 'doc' + str(self.docs_counter))
+            utils.save_obj(self.docs_posting, self.config.get_savedFileMainFolder() + '\\doc' + str(self.docs_counter))
             self.num_of_docs_in_posting = 0
             self.docs_list_for_inverted = []
             self.docs_counter += 1
@@ -128,7 +125,7 @@ class Indexer:
 
 
     def save_in_merge(self, merged_posting, merged_list):
-        utils.save_obj(merged_posting, str(self.posting_files_counter))
+        utils.save_obj(merged_posting, self.config.get_savedFileMainFolder() + "\\" + str(self.posting_files_counter))
         merged_list.append(self.posting_files_counter)
         self.posting_files_counter += 1
         return {}
@@ -145,8 +142,8 @@ class Indexer:
         merged_list = []
         idx_left = idx_right = 0
         # for the first iteration
-        posting_dict_1 = utils.load_obj(str(left[idx_left]))
-        posting_dict_2 = utils.load_obj(str(right[idx_right]))
+        posting_dict_1 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(left[idx_left]))
+        posting_dict_2 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(right[idx_right]))
         keys_1 = list(posting_dict_1.keys())
         keys_2 = list(posting_dict_2.keys())
         pointer_pd1 = pointer_pd2 = 0
@@ -240,7 +237,7 @@ class Indexer:
                 # there are more posting dicts in left
                 if idx_left < len(left)-1:
                     # idx_left += 1
-                    posting_dict_1 = utils.load_obj(str(left[idx_left]))
+                    posting_dict_1 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(left[idx_left]))
                     pointer_pd1 = 0
                     keys_1 = list(posting_dict_1.keys())
 
@@ -249,7 +246,7 @@ class Indexer:
                 idx_right += 1
                 # pointer_pd2 = 0
                 if idx_right < len((right)):
-                    posting_dict_2 = utils.load_obj(str(right[idx_right]))
+                    posting_dict_2 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(right[idx_right]))
                     pointer_pd2 = 0
                     keys_2 = list(posting_dict_2.keys())
 
@@ -264,7 +261,9 @@ class Indexer:
                 pointer_pd1 += 1
             idx_left += 1
             if idx_left < len(left):
-                posting_dict_1 = utils.load_obj(str(left[idx_left]))
+                posting_dict_1 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(left[idx_left]))
+                #########################################
+                keys_1 = list(posting_dict_1.keys())
                 pointer_pd1 = 0
 
         # right list is not finished
@@ -277,11 +276,12 @@ class Indexer:
                 pointer_pd2 += 1
             idx_right += 1
             if idx_right < len(right):
-                posting_dict_2 = utils.load_obj(str(right[idx_right]))
+                posting_dict_2 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(right[idx_right]))
+                ###########################################
+                keys_2 = list(posting_dict_2.keys())
                 pointer_pd2 = 0
 
         merged_posting = self.save_in_merge(merged_posting, merged_list)
-
         return merged_list
 
     def merge_wrap(self, pair):
@@ -319,26 +319,10 @@ class Indexer:
         if len(self.all_posting) > 0:
             self.all_posting = self.all_posting[0]
 
-        #########################################################################
-        # # test merge!
-        # l = []
-        # for i, name in enumerate(self.all_posting):
-        #     print(name)
-        #     dict = utils.load_obj(str(name))
-        #     keys = list(dict.keys())
-        #     l += keys
-        #
-        # for key in l:
-        #     if l.count(key) > 1:
-        #         print('KAKI')
-        #     else:
-        #         print(".")
-        #########################################################################
-
     # Calculate idf for each term in inverted index after finish indexing
     def calculate_idf(self, N):
         for val in self.inverted_idx.values():
-            val[0] = math.log2(N/val[0])
+            val.append(math.log2(N/val[0]))
 
 
 

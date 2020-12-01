@@ -1,5 +1,7 @@
 import re
 import json
+from datetime import datetime
+
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from document import Document
@@ -16,13 +18,13 @@ class Parse:
                   'billion': 'B', 'billions': 'B',
                   'trillion': 'TR', 'trillions': 'TR'}
     SIGNS = {'$': '$', 'usd': '$'}
-    QUANTITIES_LIST = ['K', 'M', 'B', 'TR']
+    QUANTITIES_LIST = ['K', 'M', 'B', 'TR', 'TRX', 'TRXX']
 
-    def __init__(self, with_stem):
-        self.with_stem = with_stem
+    def __init__(self, config):
+        self.with_stem = config.get_toStem()
         self.stemmer = Stemmer()
         self.stop_words = stopwords.words('english')
-        self.stop_words.extend([r' ', r'', r"", r"''", r'""', r'"', r"“", r"”", r"’", r"‘", r"``", r"'", r"`"])
+        self.stop_words.extend([r' ', r'', r"", r"''", r'""', r'"', r"“", r"”", r"’", r"‘", r"``", r"'", r"`", '"'])
         self.stop_words.extend(['rt', r'!', r'?', r',', r':', r';', r'(', r')', r'...', r'[', ']', r'{', '}' "'&'", '$', '.', r'\'s', '\'s', '\'d', r'\'d', r'n\'t'])
         self.stop_words.extend(['1️⃣.1️⃣2️⃣'])
         self.stop_words_dict = dict.fromkeys(self.stop_words)
@@ -35,6 +37,7 @@ class Parse:
         self.url_www_pattern = re.compile("[/://?=]")
         # TODO - fix numbers pattern
         self.numbers_pattern = re.compile(('^\d+([/|.|,]?\d+)*'))
+        self.non_latin_pattern = re.compile(pattern=r'[^\x00-\x7F\x80-\xFF\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF\u2019]')
         self.dates_pattern = re.compile(r'^(?:(?:31(\/|-|\.)(?:0?[13578]|1[02]))\1|(?:(?:29|30)(\/|-|\.)(?:0?[13-9]|1[0-2])\2))(?:(?:1[6-9]|[2-9]\d)?\d{2})$|^(?:29(\/|-|\.)0?2\3(?:(?:(?:1[6-9]|[2-9]\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00))))$|^(?:0?[1-9]|1\d|2[0-8])(\/|-|\.)(?:(?:0?[1-9])|(?:1[0-2]))\4(?:(?:1[6-9]|[2-9]\d)?\d{2})$')
         # TODO - fix emoji to include all emojis
         self.emojis_pattern = re.compile(pattern="["
@@ -59,6 +62,9 @@ class Parse:
                                                 "]+", flags=re.UNICODE)
 
     def parse_hashtag(self, all_tokens_list, token):
+        if len(token) <= 1:
+            return
+
         t = []
         # --> #stay_at_home
         if '_' in token:
@@ -98,7 +104,6 @@ class Parse:
         try:
             token = float(token)
         except:
-            # print('token --------------------> ' + token)
             # from this type - 10.07.2020
             all_tokens_list.append(token)
             return
@@ -126,10 +131,22 @@ class Parse:
                         return
                 # if we have after and token > 1000
                 num, count = helper(token)
-                i = Parse.QUANTITIES_LIST.index(Parse.QUANTITIES[after_token])
-                after_token = Parse.QUANTITIES_LIST[i + count]
-                all_tokens_list.append(str(num) + after_token)
-                return
+                i = Parse.QUANTITIES_LIST.index(Parse.QUANTITIES[after_token]) + 1
+
+                count = count+i
+                if count > 2:
+                    count = count - 2
+                    while (count > 0):
+                        num = float(num) * 1000
+                        count -= 1
+                    if num.is_integer():
+                        num = int(num)
+                    all_tokens_list.append(str(num) + 'B')
+                    return
+                else:
+                    after_token = Parse.QUANTITIES_LIST[count]
+                    all_tokens_list.append(str(num) + after_token)
+                    return
 
             if after_token == 'percent' or after_token == 'percentage' or after_token == '%':
                 is_pers = True
@@ -139,11 +156,20 @@ class Parse:
         else:
             num, count = helper(token)
             try:
-                after = Parse.QUANTITIES_LIST[count]
-                final_t = str(num) + after
+                # more then B
+                if count > 2:
+                    count = count - 2
+                    while (count > 0):
+                        num = float(num) * 1000
+                        count -= 1
+                    if num.is_integer():
+                        num = int(num)
+                    final_t = str(num) + 'B'
+                else:
+                    after = Parse.QUANTITIES_LIST[count]
+                    final_t = str(num) + after
             except:
-                print("prblem in parse numbers: " + token)
-
+                pass
         if b_tok:
             all_tokens_list.append(b_tok + str(final_t))
         elif is_pers:
@@ -208,7 +234,7 @@ class Parse:
             number_match = self.numbers_pattern.match(token)
             if number_match != None:
                 # Numbers over TR
-                if len(token) > 12:
+                if len(token) > 18:
                     tokenized_text.append(token)
 
                     entity = ''
@@ -311,6 +337,7 @@ class Parse:
         """
         tweet_id = doc_as_list[0]
         tweet_date = doc_as_list[1]
+        tweet_date_obj = datetime.strptime(tweet_date, '%a %b %d %X %z %Y')
         full_text = doc_as_list[2]
         url = doc_as_list[3]
         # indices = doc_as_list[4]
@@ -339,6 +366,8 @@ class Parse:
         if len(urls) > 0:
             all_texts = self.url_pattern.sub('', all_texts)
 
+        all_texts = self.non_latin_pattern.sub('', all_texts)
+
         tokenized_text, entities_set, small_big = self.parse_sentence(all_texts)
         unique_terms = set(tokenized_text)
 
@@ -358,6 +387,6 @@ class Parse:
         self.total_len_docs += doc_length
         self.number_of_documents += 1
         # TODO - check if we need to save tokenized_text
-        document = Document(tweet_id, max_tf, entities_set, small_big, unique_terms, tweet_date, term_dict, doc_length)
+        document = Document(tweet_id, max_tf, entities_set, small_big, unique_terms, tweet_date_obj, term_dict, doc_length)
 
         return document
