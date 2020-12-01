@@ -14,6 +14,7 @@ class local_method:
 
         self.loaded_doc = None
         self.loaded_doc_num = None
+        self.loaded_posting_name = None
 
         self.correlation_matrix = []
        # {wi : {doc1:tf1, doc3:tf3},  wj: {doc2:tf2, doc3:tf3}}
@@ -51,7 +52,11 @@ class local_method:
                     posting_name = self.inverted_index[term.lower()][1]
                 except:
                     continue
-            posting_dict = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(posting_name))
+
+            if self.loaded_posting_name is None or self.loaded_posting_name != posting_name:
+                posting_dict = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(posting_name))
+                self.loaded_posting_name = posting_name
+
             tweets_contain_term = posting_dict[term]
 
             # from list to dict, convert list of tuple to dict

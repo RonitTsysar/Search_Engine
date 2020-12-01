@@ -17,6 +17,8 @@ class Searcher:
         self.inverted_index = inverted_index
         self.inverted_docs = inverted_docs
 
+        self.loaded_posting = None
+        self.loaded_posting_name = None
         self.loaded_doc_name = None
         self.loaded_doc = None
 
@@ -42,23 +44,24 @@ class Searcher:
 
         relevant_docs = {}
         query_vector = np.zeros(len(query_dict), dtype=float)
-
         for idx, term in tqdm(enumerate(query_dict)):
             try:
                 posting_name = self.inverted_index[term][1]
 
-                posting_dict = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(posting_name))
+                if self.loaded_posting_name is None or self.loaded_posting_name != posting_name:
+                    self.loaded_posting = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(posting_name))
+                    self.loaded_posting_name = posting_name
                 tweets_contain_term_dict = defaultdict(list)
-                for i, j, k in posting_dict[term]:
+                for i, j, k in self.loaded_posting[term]:
                     tweets_contain_term_dict[i] = j
 
-                tweets_contain_term__ids = [i[0] for i in posting_dict[term]]
+                tweets_contain_term__ids = [i[0] for i in self.loaded_posting[term]]
 
                 for doc_name in self.inverted_docs.keys():
                     if len(tweets_contain_term__ids) == 0:
                         break
-                    doc_loaded = utils.load_obj(self.config.get_savedFileMainFolder() + '\\doc' + str(doc_name))
-                    doc_ids_in_loaded_file = doc_loaded.keys()
+                    self.loaded_doc = utils.load_obj(self.config.get_savedFileMainFolder() + '\\doc' + str(doc_name))
+                    doc_ids_in_loaded_file = self.loaded_doc.keys()
                     # all tweets in loadded doc
                     inersection_temp = list(set(list(doc_ids_in_loaded_file)) & set(tweets_contain_term__ids))
                     # remove inersection tweets from tweets_contain_term
@@ -67,7 +70,7 @@ class Searcher:
 
                     for tweet_id in inersection_temp:
                         if tweet_id not in relevant_docs:
-                            doc_len = doc_loaded[tweet_id][-1]
+                            doc_len = self.loaded_doc[tweet_id][-1]
                             relevant_docs[tweet_id] = [np.zeros(len(query_dict), dtype=float),
                                                        [np.zeros(len(query_dict), dtype=float), doc_len]]
 
