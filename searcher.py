@@ -7,11 +7,12 @@ from collections import defaultdict
 
 class Searcher:
 
-    def __init__(self, inverted_index, inverted_docs, with_stem):
+    def __init__(self, config, inverted_index, inverted_docs):
         """
         :param inverted_index: dictionary of inverted index
         """
-        self.parser = Parse(with_stem)
+        self.config = config
+        self.parser = Parse(config)
         self.ranker = Ranker()
         self.inverted_index = inverted_index
         self.inverted_docs = inverted_docs
@@ -45,8 +46,8 @@ class Searcher:
         for idx, term in tqdm(enumerate(query_dict)):
             try:
                 posting_name = self.inverted_index[term][1]
-                posting_dict = utils.load_obj(str(posting_name))
 
+                posting_dict = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(posting_name))
                 tweets_contain_term_dict = defaultdict(list)
                 for i, j, k in posting_dict[term]:
                     tweets_contain_term_dict[i] = j
@@ -56,7 +57,7 @@ class Searcher:
                 for doc_name in self.inverted_docs.keys():
                     if len(tweets_contain_term__ids) == 0:
                         break
-                    doc_loaded = utils.load_obj('doc' + str(doc_name))
+                    doc_loaded = utils.load_obj(self.config.get_savedFileMainFolder() + '\\doc' + str(doc_name))
                     doc_ids_in_loaded_file = doc_loaded.keys()
                     # all tweets in loadded doc
                     inersection_temp = list(set(list(doc_ids_in_loaded_file)) & set(tweets_contain_term__ids))

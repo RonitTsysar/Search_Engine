@@ -100,7 +100,7 @@ class Indexer:
         for i, name in enumerate(self.all_posting):
             name = name[0]
             print(name)
-            dict = utils.load_obj(str(name))
+            dict = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(name))
             keys = list(dict.keys())
             l += keys
         set_keys = set(l)
@@ -110,7 +110,7 @@ class Indexer:
         if len(self.posting_dict) > 0:
             # sort keys(terms)
             self.posting_dict = {key: self.posting_dict[key] for key in sorted(self.posting_dict)}
-            utils.save_obj(self.posting_dict, str(self.posting_files_counter))
+            utils.save_obj(self.posting_dict, self.config.get_savedFileMainFolder() + "\\" + str(self.posting_files_counter))
             # clean up
             self.num_of_terms_in_posting = 0
             self.posting_dict = {}
@@ -120,7 +120,7 @@ class Indexer:
     def save_doc(self):
         if len(self.docs_posting) > 0:
             self.docs_inverted[self.docs_counter] = self.docs_list_for_inverted
-            utils.save_obj(self.docs_posting, 'doc' + str(self.docs_counter))
+            utils.save_obj(self.docs_posting, self.config.get_savedFileMainFolder() + '\\doc' + str(self.docs_counter))
             self.num_of_docs_in_posting = 0
             self.docs_list_for_inverted = []
             self.docs_counter += 1
@@ -128,7 +128,7 @@ class Indexer:
 
 
     def save_in_merge(self, merged_posting, merged_list):
-        utils.save_obj(merged_posting, str(self.posting_files_counter))
+        utils.save_obj(merged_posting, self.config.get_savedFileMainFolder() + "\\" + str(self.posting_files_counter))
         merged_list.append(self.posting_files_counter)
         self.posting_files_counter += 1
         return {}
@@ -145,8 +145,8 @@ class Indexer:
         merged_list = []
         idx_left = idx_right = 0
         # for the first iteration
-        posting_dict_1 = utils.load_obj(str(left[idx_left]))
-        posting_dict_2 = utils.load_obj(str(right[idx_right]))
+        posting_dict_1 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(left[idx_left]))
+        posting_dict_2 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(right[idx_right]))
         keys_1 = list(posting_dict_1.keys())
         keys_2 = list(posting_dict_2.keys())
         pointer_pd1 = pointer_pd2 = 0
@@ -240,7 +240,7 @@ class Indexer:
                 # there are more posting dicts in left
                 if idx_left < len(left)-1:
                     # idx_left += 1
-                    posting_dict_1 = utils.load_obj(str(left[idx_left]))
+                    posting_dict_1 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(left[idx_left]))
                     pointer_pd1 = 0
                     keys_1 = list(posting_dict_1.keys())
 
@@ -249,7 +249,7 @@ class Indexer:
                 idx_right += 1
                 # pointer_pd2 = 0
                 if idx_right < len((right)):
-                    posting_dict_2 = utils.load_obj(str(right[idx_right]))
+                    posting_dict_2 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(right[idx_right]))
                     pointer_pd2 = 0
                     keys_2 = list(posting_dict_2.keys())
 
@@ -264,7 +264,9 @@ class Indexer:
                 pointer_pd1 += 1
             idx_left += 1
             if idx_left < len(left):
-                posting_dict_1 = utils.load_obj(str(left[idx_left]))
+                posting_dict_1 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(left[idx_left]))
+                #########################################
+                keys_1 = list(posting_dict_1.keys())
                 pointer_pd1 = 0
 
         # right list is not finished
@@ -277,11 +279,12 @@ class Indexer:
                 pointer_pd2 += 1
             idx_right += 1
             if idx_right < len(right):
-                posting_dict_2 = utils.load_obj(str(right[idx_right]))
+                posting_dict_2 = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(right[idx_right]))
+                ###########################################
+                keys_2 = list(posting_dict_2.keys())
                 pointer_pd2 = 0
 
         merged_posting = self.save_in_merge(merged_posting, merged_list)
-
         return merged_list
 
     def merge_wrap(self, pair):

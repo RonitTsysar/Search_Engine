@@ -18,8 +18,8 @@ class Parse:
     SIGNS = {'$': '$', 'usd': '$'}
     QUANTITIES_LIST = ['K', 'M', 'B', 'TR']
 
-    def __init__(self, with_stem):
-        self.with_stem = with_stem
+    def __init__(self, config):
+        self.with_stem = config.get_toStem()
         self.stemmer = Stemmer()
         self.stop_words = stopwords.words('english')
         self.stop_words.extend([r' ', r'', r"", r"''", r'""', r'"', r"“", r"”", r"’", r"‘", r"``", r"'", r"`"])
