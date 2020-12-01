@@ -76,7 +76,7 @@ class Searcher:
 
                         # TODO - decide if normalized tf or tf
                         tf_tweet = tweets_contain_term_dict[tweet_id]
-                        idf = self.inverted_index[term][0]
+                        idf = self.inverted_index[term][-1]
                         relevant_docs[tweet_id][0][idx] = tf_tweet * idf
                         relevant_docs[tweet_id][1][0][idx] = tf_tweet
 

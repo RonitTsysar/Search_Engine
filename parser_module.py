@@ -1,5 +1,7 @@
 import re
 import json
+from datetime import datetime
+
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from document import Document
@@ -35,6 +37,7 @@ class Parse:
         self.url_www_pattern = re.compile("[/://?=]")
         # TODO - fix numbers pattern
         self.numbers_pattern = re.compile(('^\d+([/|.|,]?\d+)*'))
+        self.non_latin_pattern = re.compile(pattern=r'[^\x00-\x7F\x80-\xFF\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF\u2019]')
         self.dates_pattern = re.compile(r'^(?:(?:31(\/|-|\.)(?:0?[13578]|1[02]))\1|(?:(?:29|30)(\/|-|\.)(?:0?[13-9]|1[0-2])\2))(?:(?:1[6-9]|[2-9]\d)?\d{2})$|^(?:29(\/|-|\.)0?2\3(?:(?:(?:1[6-9]|[2-9]\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00))))$|^(?:0?[1-9]|1\d|2[0-8])(\/|-|\.)(?:(?:0?[1-9])|(?:1[0-2]))\4(?:(?:1[6-9]|[2-9]\d)?\d{2})$')
         # TODO - fix emoji to include all emojis
         self.emojis_pattern = re.compile(pattern="["
@@ -59,6 +62,9 @@ class Parse:
                                                 "]+", flags=re.UNICODE)
 
     def parse_hashtag(self, all_tokens_list, token):
+        if len(token) <= 1:
+            return
+
         t = []
         # --> #stay_at_home
         if '_' in token:
@@ -332,6 +338,7 @@ class Parse:
         """
         tweet_id = doc_as_list[0]
         tweet_date = doc_as_list[1]
+        tweet_date_obj = datetime.strptime(tweet_date, '%a %b %d %X %z %Y')
         full_text = doc_as_list[2]
         url = doc_as_list[3]
         # indices = doc_as_list[4]
@@ -360,6 +367,8 @@ class Parse:
         if len(urls) > 0:
             all_texts = self.url_pattern.sub('', all_texts)
 
+        all_texts = self.non_latin_pattern.sub('', all_texts)
+
         tokenized_text, entities_set, small_big = self.parse_sentence(all_texts)
         unique_terms = set(tokenized_text)
 
@@ -379,6 +388,6 @@ class Parse:
         self.total_len_docs += doc_length
         self.number_of_documents += 1
         # TODO - check if we need to save tokenized_text
-        document = Document(tweet_id, max_tf, entities_set, small_big, unique_terms, tweet_date, term_dict, doc_length)
+        document = Document(tweet_id, max_tf, entities_set, small_big, unique_terms, tweet_date_obj, term_dict, doc_length)
 
         return document

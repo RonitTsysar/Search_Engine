@@ -17,7 +17,7 @@ class Indexer:
         # inverted_idx - {term : [df, posting_files_counter]} ----------> # inverted_idx - {term : [idf, posting_files_counter]}
         # posting_dict - {term: [(document.tweet_id, normalized_tf, tf)]}
         # tweets_inverted - {tweet_id : tweets_posting_counter}
-        # tweets_posting - {tweet_id : [document.unique_terms, document.unique_terms_amount, document.max_tf, document.doc_length]}
+        # tweets_posting - {tweet_id : [document.unique_terms, document.tweet_date_obj, document.max_tf, document.doc_length]}
 
         self.inverted_idx = {}
         self.posting_dict = {}
@@ -50,7 +50,7 @@ class Indexer:
 
         # preprocessing for Local Method
 
-        self.docs_posting[document.tweet_id] = [document.unique_terms, document.unique_terms_amount, document.max_tf, document.doc_length]
+        self.docs_posting[document.tweet_id] = [document.unique_terms, document.tweet_date_obj, document.max_tf, document.doc_length]
         # self.docs_inverted[document.tweet_id] = self.docs_counter
 
         self.docs_list_for_inverted.append(document.tweet_id)
@@ -322,26 +322,10 @@ class Indexer:
         if len(self.all_posting) > 0:
             self.all_posting = self.all_posting[0]
 
-        #########################################################################
-        # # test merge!
-        # l = []
-        # for i, name in enumerate(self.all_posting):
-        #     print(name)
-        #     dict = utils.load_obj(str(name))
-        #     keys = list(dict.keys())
-        #     l += keys
-        #
-        # for key in l:
-        #     if l.count(key) > 1:
-        #         print('KAKI')
-        #     else:
-        #         print(".")
-        #########################################################################
-
     # Calculate idf for each term in inverted index after finish indexing
     def calculate_idf(self, N):
         for val in self.inverted_idx.values():
-            val[0] = math.log2(N/val[0])
+            val.append(math.log2(N/val[0]))
 
 
 

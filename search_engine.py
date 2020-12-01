@@ -73,7 +73,7 @@ def main(corpus_path, output_path, stemming, queries, num_docs_to_retrieve):
     config.set_toStem(stemming)
     config.set_savedFileMainFolder(output_path)
 
-    # run_engine(config)
+    run_engine(config)
 
     # query = input("Please enter a query: ")
     # k = int(input("Please enter number of docs to retrieve: "))
