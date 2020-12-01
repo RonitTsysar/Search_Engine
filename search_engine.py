@@ -6,6 +6,7 @@ from indexer import Indexer
 from searcher import Searcher
 import utils
 import time
+import pandas as pd
 from tqdm import tqdm
 
 # TODO - check if it's ok to add it here!
@@ -31,12 +32,7 @@ def run_engine(config):
     indexer.check_last()
     indexer.merge_sort_parallel(3)
     print(f' time after merge sort : {time.time() - start}')
-    # TODO - to think about it
-    start = time.time()
     indexer.calculate_idf(parser.number_of_documents)
-    print(f' time after calculate_idf : {time.time() - start}')
-    print('Finished parsing and indexing. Starting to export files')
-    # TODO - check how to save
     avg_doc_len = parser.total_len_docs / parser.number_of_documents
     utils.save_obj(avg_doc_len, config.get_savedFileMainFolder() + "\\data")
 
@@ -45,12 +41,10 @@ def run_engine(config):
 
 def load_index(config):
     inverted_index = utils.load_obj(config.get_savedFileMainFolder() + "\\" + "inverted_idx")
-    print('Load inverted index')
     return inverted_index
 
 def load_docs_index(config):
     inverted_docs = utils.load_obj(config.get_savedFileMainFolder() + "\\" + "docs_inverted")
-    print('Load inverted docs index')
     return inverted_docs
 
 
@@ -87,12 +81,24 @@ def main(corpus_path, output_path, stemming, queries, num_docs_to_retrieve):
     else:
         queries_list = [line.strip() for line in open(queries, encoding="utf8")]
 
-    for querie in queries_list:
+    big_list = []
+    for idx, querie in enumerate(queries_list):
         # TODO - check if it's ok to change parameters and
         # TODO - Decide k=1000 round_1 we? need to match for the requested final k (instructions 2000 top)
 
         round_1 = search_and_rank_query(config, querie, inverted_index, inverted_docs, 10, avg_doc_len)
         local_method_ranker = local_method(config, inverted_docs, inverted_index)
         expanded_query = local_method_ranker.expand_query(querie, round_1)
-        for doc_tuple in search_and_rank_query(config, expanded_query, inverted_index, inverted_docs, num_docs_to_retrieve, avg_doc_len):
-            print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))
+        docs_list = search_and_rank_query(config, expanded_query, inverted_index, inverted_docs, num_docs_to_retrieve, avg_doc_len)
+        # for doc_tuple in search_and_rank_query(config, expanded_query, inverted_index, inverted_docs, num_docs_to_retrieve, avg_doc_len):
+        #     print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))
+
+        for tup in docs_list:
+            big_list.append((idx+1, tup[0], tup[1]))
+    write_to_csv(big_list)
+    print('finish!')
+
+def write_to_csv(tuple_list):
+
+    df = pd.DataFrame(tuple_list, columns=['query', 'tweet_id', 'score'])
+    df.to_csv('results.csv')
