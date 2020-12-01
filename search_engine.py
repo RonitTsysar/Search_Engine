@@ -23,7 +23,7 @@ def run_engine(config):
     for i, file in enumerate(r.read_corpus()):
         # Iterate over every document in the file
         number_of_files += 1
-        for idx, document in tqdm(enumerate(file)):
+        for idx, document in enumerate(file):
             # parse the document
             parsed_document = parser.parse_doc(document)
             indexer.add_new_doc(parsed_document)

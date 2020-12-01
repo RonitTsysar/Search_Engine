@@ -85,8 +85,7 @@ class Indexer:
                     bisect.insort(self.posting_dict[term], (document.tweet_id, normalized_tf, tf))
                 self.num_of_terms_in_posting += 1
             except:
-                print('problem with the following key {}'.format(term))
-
+                pass
             # saving files with pickle - TODO - give path to save this files
             if self.num_of_terms_in_posting == Indexer.TERM_NUM_IN_POSTING:
                 self.save_posting()
@@ -99,12 +98,10 @@ class Indexer:
         l = []
         for i, name in enumerate(self.all_posting):
             name = name[0]
-            print(name)
             dict = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(name))
             keys = list(dict.keys())
             l += keys
         set_keys = set(l)
-        print()
 
     def save_posting(self):
         if len(self.posting_dict) > 0:

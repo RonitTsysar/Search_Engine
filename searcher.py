@@ -83,7 +83,7 @@ class Searcher:
                         tf_query = query_dict[term]
                         query_vector[idx] = tf_query * idf
             except:
-                print('term {} not found in posting'.format(term))
+                pass
 
         return relevant_docs, query_vector
 

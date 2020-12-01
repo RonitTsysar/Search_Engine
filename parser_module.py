@@ -169,8 +169,7 @@ class Parse:
                     after = Parse.QUANTITIES_LIST[count]
                     final_t = str(num) + after
             except:
-                print("prblem in parse numbers: " + token)
-
+                pass
         if b_tok:
             all_tokens_list.append(b_tok + str(final_t))
         elif is_pers:
