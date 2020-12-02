@@ -28,5 +28,4 @@ def load_inverted_index(path):
 
     for key in inverted_index:
         to_return[key] = inverted_index[key][0]
-
     return to_return

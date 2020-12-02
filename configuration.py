@@ -19,7 +19,7 @@ class ConfigClass:
         self.toStem = to_stem
 
     def get_savedFileMainFolder(self):
-        return self.saveFilesWithStem
+        return self.savedFileMainFolder
 
     def set_savedFileMainFolder(self, path):
         self.savedFileMainFolder = path
