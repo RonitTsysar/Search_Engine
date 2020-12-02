@@ -22,4 +22,4 @@ class ConfigClass:
         return self.saveFilesWithStem
 
     def set_savedFileMainFolder(self, path):
-        self.saveFilesWithStem = path
+        self.savedFileMainFolder = path

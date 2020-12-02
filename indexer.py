@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 class Indexer:
 
-    TERM_NUM_IN_POSTING = 250000
+    TERM_NUM_IN_POSTING = 500000
     DOC_NUM_IN_POSTING = 250000
 
     def __init__(self, config):

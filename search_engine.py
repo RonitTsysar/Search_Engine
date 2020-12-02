@@ -58,7 +58,6 @@ def search_and_rank_query(config, query, inverted_index, inverted_docs, k, avg_d
     return searcher.ranker.retrieve_top_k(ranked_docs, k)
 
 
-# def main(with_stem):
 def main(corpus_path, output_path, stemming, queries, num_docs_to_retrieve):
 
     # update configurations

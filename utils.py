@@ -1,5 +1,5 @@
 import pickle
-
+import os
 
 def save_obj(obj, name):
     """
@@ -20,3 +20,13 @@ def load_obj(name):
     """
     with open(name + '.pkl', 'rb') as f:
         return pickle.load(f)
+
+
+def load_inverted_index(path):
+    to_return = {}
+    inverted_index = load_obj(os.path.join(path, "inverted_idx"))
+
+    for key in inverted_index:
+        to_return[key] = inverted_index[key][0]
+
+    return to_return
