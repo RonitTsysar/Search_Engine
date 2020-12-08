@@ -5,9 +5,8 @@ from parser_module import Parse
 from indexer import Indexer
 from searcher import Searcher
 import utils
-import time
 import pandas as pd
-from tqdm import tqdm
+import re
 
 # TODO - check if it's ok to add it here!
 
@@ -28,10 +27,8 @@ def run_engine(config):
             # parse the document
             parsed_document = parser.parse_doc(document)
             indexer.add_new_doc(parsed_document)
-    start = time.time()
     indexer.check_last()
     indexer.merge_sort_parallel(3)
-    print(f' time after merge sort : {time.time() - start}')
     indexer.calculate_idf(parser.number_of_documents)
     avg_doc_len = parser.total_len_docs / parser.number_of_documents
     utils.save_obj(avg_doc_len, config.get_savedFileMainFolder() + "\\data")
@@ -80,7 +77,7 @@ def main(corpus_path, output_path, stemming, queries, num_docs_to_retrieve):
     else:
         queries_list = [line.strip() for line in open(queries, encoding="utf8")]
 
-    big_list = []
+    csv_data = []
     for idx, querie in enumerate(queries_list):
         # TODO - check if it's ok to change parameters and
         # TODO - Decide k=1000 round_1 we? need to match for the requested final k (instructions 2000 top)
@@ -88,14 +85,13 @@ def main(corpus_path, output_path, stemming, queries, num_docs_to_retrieve):
         round_1 = search_and_rank_query(config, querie, inverted_index, inverted_docs, 10, avg_doc_len)
         local_method_ranker = local_method(config, inverted_docs, inverted_index)
         expanded_query = local_method_ranker.expand_query(querie, round_1)
-        docs_list = search_and_rank_query(config, expanded_query, inverted_index, inverted_docs, num_docs_to_retrieve, avg_doc_len)
+        round_2 = search_and_rank_query(config, expanded_query, inverted_index, inverted_docs, num_docs_to_retrieve, avg_doc_len)
         # for doc_tuple in search_and_rank_query(config, expanded_query, inverted_index, inverted_docs, num_docs_to_retrieve, avg_doc_len):
         #     print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))
 
-        for tup in docs_list:
-            big_list.append((idx+1, tup[0], tup[1]))
-    write_to_csv(big_list)
-    print('finish!')
+        for tup in round_2:
+            csv_data.append((idx+1, tup[0], tup[1]))
+    write_to_csv(csv_data)
 
 def write_to_csv(tuple_list):
 
