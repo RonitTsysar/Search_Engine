@@ -57,13 +57,16 @@ def search_and_rank_query(config, query, inverted_index, inverted_docs, k, avg_d
 
 def main(corpus_path, output_path, stemming, queries, num_docs_to_retrieve):
 
+    if num_docs_to_retrieve > 2000:
+        num_docs_to_retrieve = 2000
+
     # update configurations
     config = ConfigClass()
     config.set_corpusPath(corpus_path)
     config.set_toStem(stemming)
     config.set_savedFileMainFolder(output_path)
 
-    run_engine(config)
+    # run_engine(config)
 
     # query = input("Please enter a query: ")
     # k = int(input("Please enter number of docs to retrieve: "))
@@ -82,16 +85,16 @@ def main(corpus_path, output_path, stemming, queries, num_docs_to_retrieve):
         # TODO - check if it's ok to change parameters and
         # TODO - Decide k=1000 round_1 we? need to match for the requested final k (instructions 2000 top)
 
-        round_1 = search_and_rank_query(config, querie, inverted_index, inverted_docs, 10, avg_doc_len)
+        round_1 = search_and_rank_query(config, querie, inverted_index, inverted_docs, 100, avg_doc_len)
         local_method_ranker = local_method(config, inverted_docs, inverted_index)
         expanded_query = local_method_ranker.expand_query(querie, round_1)
         round_2 = search_and_rank_query(config, expanded_query, inverted_index, inverted_docs, num_docs_to_retrieve, avg_doc_len)
-        # for doc_tuple in search_and_rank_query(config, expanded_query, inverted_index, inverted_docs, num_docs_to_retrieve, avg_doc_len):
-        #     print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))
+        for doc_tuple in search_and_rank_query(config, expanded_query, inverted_index, inverted_docs, num_docs_to_retrieve, avg_doc_len):
+             print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))
 
-        for tup in round_2:
-            csv_data.append((idx+1, tup[0], tup[1]))
-    write_to_csv(csv_data)
+    #     for tup in round_1:
+    #         csv_data.append((idx+1, tup[0], tup[1]))
+    # write_to_csv(csv_data)
 
 def write_to_csv(tuple_list):
 

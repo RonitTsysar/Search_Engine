@@ -17,32 +17,36 @@ class local_method:
         self.loaded_posting_name = None
 
         self.correlation_matrix = []
-       # {wi : {doc1:tf1, doc3:tf3},  wj: {doc2:tf2, doc3:tf3}}
+        # {wi : {doc1:tf1, doc3:tf3},  wj: {doc2:tf2, doc3:tf3}}
         self.relevant_docs_per_term = {}
 
     def expand_query(self, query, round_1):
 
+        query_set = set()
+        query_set.update(query.split(' '))
+
         all_unique_terms = set()
-        relevent_tweets_id = [i[0] for i in round_1]
+        relevent_tweets_id = {}
+        for tup in round_1:
+            relevent_tweets_id[tup[0]] = self.inverted_docs[tup[0]]
+        # sort by value
+        relevent_tweets_id = {k: v for k, v in sorted(relevent_tweets_id.items(), key=lambda item: item[1])}
 
-        for doc_name in self.inverted_docs.keys():
-            inersection_temp = []
-            if len(relevent_tweets_id) == 0:
-                break
-            self.loaded_doc = utils.load_obj(self.config.get_savedFileMainFolder() + '\\doc' + str(doc_name))
-            doc_ids_in_loaded_file = self.loaded_doc.keys()
-            # all tweets in loadded doc
-            inersection_temp = list(set(list(doc_ids_in_loaded_file)) & set(relevent_tweets_id))
+        # create unique_terms set
+        for tweet in relevent_tweets_id.items():
+            tweet_posting = tweet[1]
+            tweet_id = tweet[0]
+            # load suitable posting
+            if self.loaded_doc_num is None or self.loaded_doc_num != tweet_posting:
+                self.loaded_doc = utils.load_obj(self.config.get_savedFileMainFolder() + '\\doc' + str(tweet_posting))
+                self.loaded_doc_num = tweet_posting
 
-            # remove inersection tweets from tweets_contain_term
-            temp = [doc for doc in relevent_tweets_id if doc not in inersection_temp]
-            relevent_tweets_id = temp
+            unique_terms = self.loaded_doc[tweet_id][0]
+            all_unique_terms.update(unique_terms)
 
-            for tweet_id in inersection_temp:
-                unique_terms = self.loaded_doc[tweet_id][0]
-                all_unique_terms.update(unique_terms)
+        # n = len(all_unique_terms)
 
-        n = len(all_unique_terms)
+       ################################################################################################################
 
         for i, term in enumerate(all_unique_terms):
             try:
@@ -90,20 +94,23 @@ class local_method:
         # normalization
         for i in range(len(all_terms)):
             for j in range(len(all_terms)):
-                devide_val = float(self.correlation_matrix[i][i]) + float(self.correlation_matrix[j][j]) - float(self.correlation_matrix[i][j])
+                devide_val = float(self.correlation_matrix[i][i]) + float(self.correlation_matrix[j][j]) - float(
+                    self.correlation_matrix[i][j])
                 if devide_val == 0:
                     self.correlation_matrix[i][j] = 0
                 else:
-                    self.correlation_matrix[i][j] = float(self.correlation_matrix[i][j]) / float((self.correlation_matrix[i][i]) + float(self.correlation_matrix[j][j]) - float(self.correlation_matrix[i][j]))
-
+                    self.correlation_matrix[i][j] = float(self.correlation_matrix[i][j]) / float(
+                        (self.correlation_matrix[i][i]) + float(self.correlation_matrix[j][j]) - float(
+                            self.correlation_matrix[i][j]))
 
         for index in query_indexes:
             term_list = self.correlation_matrix[index]
             del term_list[index]
             max_value = max(term_list)
             max_index = self.correlation_matrix[index].index(max_value)
-            query += ' ' + all_terms[max_index]
+            query_set.add(all_terms[max_index])
 
+        query = ' '.join(str(e) for e in query_set)
         return query
 
     def calculate_Cij(self, wi_tf_dict, wj_tf_dict):

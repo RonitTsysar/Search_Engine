@@ -16,6 +16,7 @@ class Indexer:
 
         # inverted_idx - {term : [df, posting_files_counter]} ----------> # inverted_idx - {term : [idf, posting_files_counter]}
         # posting_dict - {term: [(document.tweet_id, normalized_tf, tf)]}
+
         # tweets_inverted - {tweet_id : tweets_posting_counter}
         # tweets_posting - {tweet_id : [document.unique_terms, document.tweet_date_obj, document.max_tf, document.doc_length]}
 
@@ -31,7 +32,7 @@ class Indexer:
 
         # for Local Method
         self.docs_inverted = {}
-        self.docs_list_for_inverted = []
+        # self.docs_list_for_inverted = []
         self.docs_posting = {}
         self.docs_counter = 1
         self.num_of_docs_in_posting = 0
@@ -51,9 +52,9 @@ class Indexer:
         # preprocessing for Local Method
 
         self.docs_posting[document.tweet_id] = [document.unique_terms, document.tweet_date_obj, document.max_tf, document.doc_length]
-        # self.docs_inverted[document.tweet_id] = self.docs_counter
+        self.docs_inverted[document.tweet_id] = self.docs_counter
 
-        self.docs_list_for_inverted.append(document.tweet_id)
+        # self.docs_list_for_inverted.append(document.tweet_id)
         self.num_of_docs_in_posting += 1
 
         if self.num_of_docs_in_posting == Indexer.DOC_NUM_IN_POSTING:
@@ -116,10 +117,10 @@ class Indexer:
 
     def save_doc(self):
         if len(self.docs_posting) > 0:
-            self.docs_inverted[self.docs_counter] = self.docs_list_for_inverted
+            # self.docs_inverted[self.docs_counter] = self.docs_list_for_inverted
             utils.save_obj(self.docs_posting, self.config.get_savedFileMainFolder() + '\\doc' + str(self.docs_counter))
             self.num_of_docs_in_posting = 0
-            self.docs_list_for_inverted = []
+            # self.docs_list_for_inverted = []
             self.docs_counter += 1
             self.docs_posting = {}
 

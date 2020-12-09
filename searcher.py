@@ -2,8 +2,6 @@ from parser_module import Parse
 from ranker import Ranker
 import utils
 import numpy as np
-from tqdm import tqdm
-from collections import defaultdict
 
 class Searcher:
 
@@ -21,6 +19,7 @@ class Searcher:
         self.loaded_posting_name = None
         self.loaded_doc_name = None
         self.loaded_doc = None
+
 
     def get_query_dict(self, tokenized_query):
         # create {term : tf} for query
@@ -42,50 +41,43 @@ class Searcher:
 
     def relevant_docs_from_posting(self, query_dict):
 
+        posting_query_dict = {}
+        for term in query_dict:
+            # we have that try because of the entities problem
+            try:
+                posting_query_dict[term] = self.inverted_index[term][1]
+            except:
+                pass
+        # sort by value
+        posting_query_dict = {k: v for k, v in sorted(posting_query_dict.items(), key=lambda item: item[1])}
+
         relevant_docs = {}
         query_vector = np.zeros(len(query_dict), dtype=float)
-        for idx, term in tqdm(enumerate(query_dict)):
-            try:
-                posting_name = self.inverted_index[term][1]
 
+        for indx, item in enumerate(posting_query_dict.items()):
+            try:
+                term = item[0]
+                posting_name = item[1]
+
+                # load suitable posting
                 if self.loaded_posting_name is None or self.loaded_posting_name != posting_name:
                     self.loaded_posting = utils.load_obj(self.config.get_savedFileMainFolder() + "\\" + str(posting_name))
                     self.loaded_posting_name = posting_name
-                tweets_contain_term_dict = defaultdict(list)
-                for i, j, k in self.loaded_posting[term]:
-                    tweets_contain_term_dict[i] = j
 
-                tweets_contain_term__ids = [i[0] for i in self.loaded_posting[term]]
+                for tup in self.loaded_posting[term]:
+                    tweet_id = tup[0]
 
-                for doc_name in self.inverted_docs.keys():
-                    if len(tweets_contain_term__ids) == 0:
-                        break
-                    self.loaded_doc = utils.load_obj(self.config.get_savedFileMainFolder() + '\\doc' + str(doc_name))
-                    doc_ids_in_loaded_file = self.loaded_doc.keys()
-                    # all tweets in loadded doc
-                    inersection_temp = list(set(list(doc_ids_in_loaded_file)) & set(tweets_contain_term__ids))
-                    # remove inersection tweets from tweets_contain_term
-                    temp = [doc for doc in tweets_contain_term__ids if doc not in inersection_temp]
-                    tweets_contain_term__ids = temp
+                    if tweet_id not in relevant_docs.keys():
+                        relevant_docs[tweet_id] = np.zeros(len(query_dict), dtype=float)
 
-                    for tweet_id in inersection_temp:
-                        if tweet_id not in relevant_docs:
-                            doc_len = self.loaded_doc[tweet_id][-1]
-                            relevant_docs[tweet_id] = [np.zeros(len(query_dict), dtype=float),
-                                                       [np.zeros(len(query_dict), dtype=float), doc_len]]
+                    tf_tweet = tup[1]
+                    idf = self.inverted_index[term][-1]
+                    relevant_docs[tweet_id][indx] = tf_tweet * idf
 
-                        # TODO - decide if normalized tf or tf
-                        tf_tweet = tweets_contain_term_dict[tweet_id]
-                        idf = self.inverted_index[term][-1]
-                        relevant_docs[tweet_id][0][idx] = tf_tweet * idf
-                        relevant_docs[tweet_id][1][0][idx] = tf_tweet
-
-                        tf_query = query_dict[term]
-                        query_vector[idx] = tf_query * idf
+                    tf_query = query_dict[term]
+                    query_vector[indx] = tf_query * idf
             except:
                 pass
-
         return relevant_docs, query_vector
-
 
 
